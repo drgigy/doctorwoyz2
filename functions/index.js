@@ -203,7 +203,7 @@ exports.generateVisitNote = onCall(
       throw new HttpsError("invalid-argument", "Unsupported recording format.");
     }
 
-    const models = ["gemini-3.5-flash", "gemini-2.5-flash"];
+    const models = ["gemini-2.5-flash", "gemini-3.5-flash"];
     const errors = [];
 
     for (const model of models) {
@@ -218,17 +218,33 @@ exports.generateVisitNote = onCall(
       } catch (error) {
         errors.push(error.message);
         const retryable =
+          error.status === 400 ||
+          error.status === 403 ||
+          error.status === 404 ||
           error.status === 429 ||
           error.status === 503 ||
-          /high demand|overload|temporar|try again/i.test(error.message);
+          /model|quota|billing|permission|not found|high demand|overload|temporar|try again/i.test(error.message);
         if (!retryable) break;
       }
     }
 
     console.error("Visit note generation failed:", errors);
+    const combinedError = errors.join(" | ");
+    if (/quota|rate limit|resource exhausted/i.test(combinedError)) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "The Gemini API quota has been reached. Check AI Studio usage or billing."
+      );
+    }
+    if (/api key|permission|forbidden|billing/i.test(combinedError)) {
+      throw new HttpsError(
+        "permission-denied",
+        "The Gemini API key or billing configuration does not allow this request."
+      );
+    }
     throw new HttpsError(
       "internal",
-      "The visit note could not be generated. Please try again."
+      `The visit note could not be generated. ${combinedError.slice(0, 300)}`
     );
   }
 );
