@@ -1612,7 +1612,10 @@
         document.getElementById("resultMessage").textContent = "";
       } catch (error) {
         fillReport({});
-        document.getElementById("resultMessage").textContent = error.message;
+        console.error("Visit note generation failed:", error);
+        const message = error?.message || "The visit note could not be generated.";
+        document.getElementById("resultMessage").textContent =
+          `${message} Your recording was not saved; please return and try again.`;
       }
       setView("result");
     }
