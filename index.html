@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Neurology OPD voice scribe for structured, editable visit notes.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Doctor WOYZ">
+  <title>Doctor WOYZ</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-soft: #eff6ff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --indigo: #4f46e5;
+      --shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+    }
+
+    .dark {
+      color-scheme: dark;
+      --bg: #020617;
+      --panel: #0f172a;
+      --panel-soft: #0b1f45;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --line: #1e293b;
+      --shadow: none;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app.locked {
+      display: none;
+    }
+
+    .approval-gate {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+      background: var(--bg);
+    }
+
+    .approval-gate.hidden {
+      display: none;
+    }
+
+    .approval-card {
+      width: min(100%, 440px);
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .approval-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .approval-brand .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      font-size: 23px;
+    }
+
+    .approval-card h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .approval-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .approval-field {
+      margin-top: 18px;
+    }
+
+    .approval-field label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .approval-field input {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: var(--bg);
+      font: 600 15px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-transform: uppercase;
+      outline: none;
+    }
+
+    .approval-field input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .request-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .request-row button,
+    .approve-button {
+      min-height: 46px;
+      border: 0;
+      border-radius: 7px;
+      color: #ffffff;
+      background: var(--blue);
+      padding: 10px 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .approve-button {
+      width: 100%;
+      margin-top: 18px;
+    }
+
+    .approval-message {
+      min-height: 20px;
+      margin-top: 12px !important;
+      color: #b42318 !important;
+      font-size: 13px !important;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      backdrop-filter: blur(14px);
+    }
+
+    .topbar-inner {
+      max-width: 1100px;
+      min-height: 72px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      padding: 6px;
+    }
+
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #111827, var(--blue));
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+      color: #ffffff;
+      font-size: 27px;
+      font-weight: 900;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+
+    .brand-title {
+      font-size: 26px;
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: 0;
+      background: linear-gradient(90deg, #1d4ed8, #2563eb, #06b6d4);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .new-button {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 10px;
+      color: #ffffff;
+      background: linear-gradient(90deg, var(--blue), var(--indigo));
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+    }
+
+    .new-button.visible {
+      display: inline-flex;
+    }
+
+    main {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 32px 20px 24px;
+    }
+
+    .center {
+      width: min(100%, 640px);
+      align-self: center;
+      text-align: center;
+    }
+
+    .intro {
+      margin: 0 auto 28px;
+      max-width: 560px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: clamp(22px, 4vw, 32px);
+    }
+
+    .card.strict {
+      background: color-mix(in srgb, var(--panel) 82%, #dbeafe);
+      border-color: #bfdbfe;
+    }
+
+    .focus-box {
+      position: relative;
+      min-height: 172px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 84%, var(--panel)), var(--panel));
+      margin-bottom: 24px;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+    }
+
+    .focus-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pulse-wrap {
+      position: relative;
+      width: 74px;
+      height: 74px;
+      display: grid;
+      place-items: center;
+    }
+
+    .pulse-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid rgba(37, 99, 235, 0.2);
+    }
+
+    .focus-box.recording .pulse-ring {
+      animation: pulseRing 1.7s ease-out infinite;
+    }
+
+    .focus-mark {
+      position: relative;
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #111827, var(--blue));
+      color: #ffffff;
+      font-size: 30px;
+      font-weight: 900;
+      box-shadow: 0 16px 32px rgba(37, 99, 235, 0.2);
+    }
+
+    .timer-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @keyframes pulseRing {
+      from {
+        opacity: 0.8;
+        transform: scale(0.82);
+      }
+      to {
+        opacity: 0;
+        transform: scale(1.42);
+      }
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      min-height: 72px;
+    }
+
+    .control-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-label {
+      display: none;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .mobile-button-text {
+      display: none;
+    }
+
+    .round {
+      width: 64px;
+      height: 64px;
+      border: 0;
+      border-radius: 999px;
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 14px 28px rgba(15, 23, 42, 0.18);
+      transition: transform 150ms ease, filter 150ms ease;
+    }
+
+    .round:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.04);
+    }
+
+    .round:active {
+      transform: scale(0.96);
+    }
+
+    .round.record {
+      width: 76px;
+      height: 76px;
+      background: var(--blue);
+    }
+
+    .round.pause {
+      background: #f59e0b;
+    }
+
+    .round.stop {
+      background: #ea580c;
+    }
+
+    .round.discard {
+      background: #0f172a;
+    }
+
+    .extend-button {
+      min-height: 44px;
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      color: var(--blue-dark);
+      background: #eff6ff;
+      padding: 10px 13px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
+      transition: transform 150ms ease, filter 150ms ease;
+    }
+
+    .extend-button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+    }
+
+    .timer {
+      font: 700 28px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--text);
+    }
+
+    .status {
+      min-height: 26px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .strict-row {
+      margin: 22px auto 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .checkbox {
+      width: 20px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      border-radius: 5px;
+      border: 1px solid #cbd5e1;
+      background: var(--panel);
+    }
+
+    .strict-row.active {
+      color: var(--blue);
+    }
+
+    .strict-row.active .checkbox {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #ffffff;
+    }
+
+    .pills {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .settings {
+      position: fixed;
+      left: 24px;
+      bottom: 24px;
+      z-index: 20;
+    }
+
+    .settings-panel {
+      display: none;
+      position: absolute;
+      left: 0;
+      bottom: 48px;
+      width: min(320px, calc(100vw - 32px));
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 24px 50px rgba(15, 23, 42, 0.18);
+      text-align: left;
+    }
+
+    .settings.open .settings-panel {
+      display: block;
+    }
+
+    .settings-title {
+      margin: 0 0 14px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 0;
+    }
+
+    .api-field {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .api-field label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .api-field input {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: var(--bg);
+      font: 500 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      outline: none;
+    }
+
+    .key-control {
+      position: relative;
+    }
+
+    .key-control input {
+      padding-right: 44px;
+    }
+
+    .key-visibility {
+      position: absolute;
+      top: 50%;
+      right: 5px;
+      width: 34px;
+      height: 34px;
+      transform: translateY(-50%);
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 7px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .settings-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .settings-actions .save-key {
+      margin-top: 0;
+    }
+
+    .remove-key {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: #b42318;
+      background: var(--panel);
+      padding: 11px 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .key-status {
+      min-height: 18px;
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .api-field select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: var(--bg);
+      font: 600 13px/1.3 Inter, system-ui, sans-serif;
+      outline: none;
+    }
+
+    .api-field input:focus,
+    .api-field select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .save-key {
+      width: 100%;
+      margin-top: 12px;
+      border: 0;
+      border-radius: 10px;
+      color: #ffffff;
+      background: var(--blue);
+      padding: 11px 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .switch {
+      width: 44px;
+      height: 24px;
+      border: 0;
+      border-radius: 999px;
+      padding: 3px;
+      cursor: pointer;
+      background: #cbd5e1;
+      transition: background 150ms ease;
+    }
+
+    .switch span {
+      display: block;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      transition: transform 150ms ease;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+    }
+
+    .switch.on {
+      background: var(--blue);
+    }
+
+    .switch.on span {
+      transform: translateX(20px);
+    }
+
+    .settings-button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+    }
+
+    .result {
+      width: min(100%, 1040px);
+      display: none;
+    }
+
+    .result.visible {
+      display: block;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .result-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .result-title-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      color: var(--blue);
+      background: #dbeafe;
+    }
+
+    .result-header h2 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+
+    .result-message {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .result-actions {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .copy-button {
+      border: 1px solid #bfdbfe;
+      background: var(--panel);
+      color: var(--blue-dark);
+      border-radius: 10px;
+      padding: 11px 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 5px 14px rgba(37, 99, 235, 0.08);
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .section {
+      min-width: 0;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      text-align: left;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+
+    .section.full {
+      grid-column: 1 / -1;
+    }
+
+    .section.diagnosis {
+      border-color: #bfdbfe;
+      background: #eff6ff;
+    }
+
+    .dark .section.diagnosis {
+      background: #0b1f45;
+    }
+
+    .section h3 {
+      margin: 0 0 12px;
+      color: #94a3b8;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .section.diagnosis h3 {
+      color: var(--blue);
+    }
+
+    .section textarea {
+      display: block;
+      width: 100%;
+      min-height: 56px;
+      height: auto;
+      max-height: none;
+      field-sizing: content;
+      overflow-x: hidden;
+      overflow-y: hidden !important;
+      border: 0;
+      border-radius: 6px;
+      padding: 2px;
+      resize: none;
+      color: var(--text);
+      background: transparent;
+      font: inherit;
+      font-size: 15px;
+      line-height: 1.6;
+      outline: none;
+    }
+
+    .section textarea:focus {
+      background: color-mix(in srgb, var(--bg) 70%, transparent);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 10%, transparent);
+    }
+
+    .section.diagnosis textarea {
+      color: #1e3a8a;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .dark .section.diagnosis textarea {
+      color: #bfdbfe;
+    }
+
+    .processing {
+      display: none;
+      width: min(100%, 540px);
+      align-self: center;
+    }
+
+    .processing.visible {
+      display: block;
+    }
+
+    .progress {
+      height: 12px;
+      margin-top: 18px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #e2e8f0;
+    }
+
+    .progress span {
+      display: block;
+      width: 42%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--indigo));
+      animation: progress 1.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes progress {
+      from { width: 24%; }
+      to { width: 92%; }
+    }
+
+    @media (max-width: 720px) {
+      .topbar-inner {
+        min-height: 60px;
+        justify-content: flex-start;
+        padding: 8px max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+      }
+
+      .brand {
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        border-radius: 9px;
+        font-size: 23px;
+      }
+
+      .brand-title {
+        font-size: 20px;
+        white-space: nowrap;
+      }
+
+      .new-button {
+        position: static;
+        transform: none;
+        margin-left: auto;
+        padding: 9px 10px;
+      }
+
+      main {
+        padding: 16px 12px calc(82px + env(safe-area-inset-bottom));
+      }
+
+      .intro {
+        margin-bottom: 18px;
+        font-size: 14px;
+      }
+
+      .card {
+        border-radius: 14px;
+        padding: 18px 14px;
+      }
+
+      .focus-box {
+        min-height: 148px;
+        margin-bottom: 18px;
+        padding: 18px;
+      }
+
+      .strict-row {
+        display: none;
+      }
+
+      .controls {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        min-height: 0;
+      }
+
+      .control-item {
+        width: 100%;
+        gap: 0;
+      }
+
+      .control-label {
+        display: none;
+      }
+
+      .mobile-button-text {
+        display: inline;
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .round {
+        width: 100%;
+        height: 76px;
+        min-width: 0;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 12px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+      }
+
+      .round.record {
+        width: 100%;
+        height: 112px;
+        border-radius: 14px;
+      }
+
+      .start-control,
+      .pause-control,
+      .extend-control {
+        grid-column: 1 / -1;
+      }
+
+      .stop-control {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .refresh-control {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .pause-control {
+        grid-row: 2;
+      }
+
+      .extend-control {
+        grid-row: 3;
+      }
+
+      .extend-button {
+        width: 100%;
+        height: 76px;
+        min-height: 76px;
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-size: 16px;
+      }
+
+      .timer {
+        font-size: 26px;
+      }
+
+      .status {
+        margin-top: 10px;
+        font-size: 13px;
+      }
+
+      .result-header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .result-title-icon {
+        width: 40px;
+        height: 40px;
+      }
+
+      .result-header h2 {
+        font-size: 22px;
+      }
+
+      .result-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .copy-button {
+        width: 100%;
+      }
+
+      .result-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .section {
+        padding: 14px;
+        border-radius: 8px;
+      }
+
+      .settings {
+        left: max(12px, env(safe-area-inset-left));
+        bottom: max(12px, env(safe-area-inset-bottom));
+      }
+
+      .settings-panel {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(58px + env(safe-area-inset-bottom));
+        width: auto;
+        max-height: min(620px, calc(100dvh - 90px));
+        overflow-y: auto;
+        border-radius: 8px;
+      }
+    }
+
+    @media (max-width: 390px) {
+      .approval-card { padding: 22px 18px; }
+      .brand-title { font-size: 18px; }
+      .new-button { font-size: 0; padding: 10px; }
+      .new-button svg { width: 19px; height: 19px; }
+      .card { padding: 16px 12px; }
+      .section textarea { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <section class="approval-gate" id="approvalGate">
+    <div class="approval-card">
+      <div class="approval-brand"><span class="brand-mark">W</span><span>Doctor WOYZ</span></div>
+      <h1>Device approval required</h1>
+      <p id="approvalStatusText" hidden></p>
+      <div class="approval-field">
+        <label for="doctorName">Doctor's name</label>
+        <input id="doctorName" type="text" autocomplete="name" placeholder="Dr. Name">
+      </div>
+      <div class="approval-field">
+        <label for="deviceName">Device name</label>
+        <input id="deviceName" type="text" autocomplete="off" placeholder="OPD Room 1">
+      </div>
+      <button class="approve-button" id="registerDeviceButton" type="button">Request approval</button>
+      <p class="approval-message" id="approvalMessage"></p>
+    </div>
+  </section>
+
+  <div class="app locked" id="app">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <button class="brand" id="brandButton" type="button" title="New dictation">
+          <span class="brand-mark" aria-hidden="true">
+            W
+          </span>
+          <span class="brand-title">Doctor WOYZ</span>
+        </button>
+        <button class="new-button" id="newButton" type="button">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
+          New Scribe
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="center" id="recordView">
+        <p class="intro">Record the doctor-patient conversation and convert it into a structured OPD visit note.</p>
+        <div class="card" id="recordCard">
+          <div class="focus-box" id="focusBox">
+            <div class="focus-inner">
+              <div class="pulse-wrap" aria-hidden="true">
+                <span class="pulse-ring"></span>
+                <span class="focus-mark">W</span>
+              </div>
+              <div class="timer-label">Remaining</div>
+              <div class="timer" id="timer">05:00</div>
+            </div>
+          </div>
+          <div class="controls" id="controls">
+            <span class="control-item start-control">
+              <button class="round record" id="recordButton" type="button" title="Start Recording" aria-label="Start Recording">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
+                <span class="mobile-button-text">Start recording</span>
+              </button>
+              <span class="control-label">Start recording</span>
+            </span>
+          </div>
+          <div class="status" id="status">Tap microphone to start dictation</div>
+        </div>
+
+        <label class="strict-row" id="strictToggle">
+          <span class="checkbox" id="strictCheck"></span>
+          <span>
+            Strict Dictation Mode
+            <span id="strictHelp" style="display:none; font-size:11px; font-weight:600; color:#60a5fa;">Word-for-word transcription with grammar checks</span>
+          </span>
+        </label>
+
+      </section>
+
+      <section class="processing card" id="processingView">
+        <h2 style="margin:0 0 6px;">AI Scribe Working</h2>
+        <p id="processingText" style="margin:0; color:var(--muted);">Preparing your visit note...</p>
+        <div class="progress"><span></span></div>
+      </section>
+
+      <section class="result" id="resultView">
+        <div class="result-header">
+          <div class="result-title">
+            <span class="result-title-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h8"></path></svg>
+            </span>
+            <div>
+              <h2>Visit Note</h2>
+              <p class="result-message" id="resultMessage"></p>
+            </div>
+          </div>
+          <div class="result-actions">
+            <button class="copy-button" id="copyWithoutNilButton" type="button">Copy without NIL</button>
+            <button class="copy-button" id="copyButton" type="button">Copy All</button>
+          </div>
+        </div>
+        <div class="result-grid">
+          <div class="section patient-detail">
+            <h3>Name</h3>
+            <textarea id="patientName">NIL</textarea>
+          </div>
+          <div class="section patient-detail">
+            <h3>Age</h3>
+            <textarea id="patientAge">NIL</textarea>
+          </div>
+          <div class="section patient-detail">
+            <h3>Sex</h3>
+            <textarea id="patientSex">NIL</textarea>
+          </div>
+          <div class="section patient-detail">
+            <h3>UHID</h3>
+            <textarea id="patientUhid">NIL</textarea>
+          </div>
+          <div class="section full">
+            <h3>1. Presenting Complaint</h3>
+            <textarea id="presentingComplaint">Connect your API to generate this section from the recorded audio.</textarea>
+          </div>
+          <div class="section full">
+            <h3>2. History of Present Illness</h3>
+            <textarea id="historyOfPresentIllness">The generated history of present illness will appear here.</textarea>
+          </div>
+          <div class="section">
+            <h3>3. Past Medical History</h3>
+            <textarea id="pastMedicalHistory">Awaiting generated past medical history.</textarea>
+          </div>
+          <div class="section">
+            <h3>4. Allergies</h3>
+            <textarea id="allergies">NIL</textarea>
+          </div>
+          <div class="section">
+            <h3>5. Family History</h3>
+            <textarea id="familyHistory">NIL</textarea>
+          </div>
+          <div class="section">
+            <h3>6. Personal History</h3>
+            <textarea id="personalHistory">Awaiting generated personal history.</textarea>
+          </div>
+          <div class="section full">
+            <h3>7. Examination Findings</h3>
+            <textarea id="examinationFindings">NIL</textarea>
+          </div>
+          <div class="section full">
+            <h3>8. Current Medication</h3>
+            <textarea id="currentMedication">NIL</textarea>
+          </div>
+          <div class="section full diagnosis">
+            <h3>9. Provisional Diagnosis</h3>
+            <textarea id="provisionalDiagnosis">Awaiting generated provisional diagnosis.</textarea>
+          </div>
+          <div class="section full">
+            <h3>10. Treatment Plan</h3>
+            <textarea id="treatmentPlan">Awaiting generated treatment plan.</textarea>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="settings" id="settings">
+      <div class="settings-panel">
+        <p class="settings-title">Settings</p>
+        <div class="setting-row">
+          <span>Dark Mode</span>
+          <button class="switch" id="darkSwitch" type="button" aria-label="Toggle dark mode"><span></span></button>
+        </div>
+        <p class="key-status">AI processing is securely connected.</p>
+      </div>
+      <button class="settings-button" id="settingsButton" type="button" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.52a2 2 0 0 1-1 1.72l-.15.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.52a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      </button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+    import { doc, getFirestore, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-functions.js";
+
+    const firebaseConfig = {
+      apiKey: ["AIzaSyDaSqQLix", "jaib7hfsv9hsLzebWU_kZuLmY"].join(""),
+      authDomain: "woyz-be9e5.firebaseapp.com",
+      projectId: "woyz-be9e5",
+      storageBucket: "woyz-be9e5.firebasestorage.app",
+      messagingSenderId: "757935575451",
+      appId: "1:757935575451:web:4adba5f60e49346cce513e",
+      measurementId: "G-LBPXGJCKRB"
+    };
+
+    const firebaseApp = initializeApp(firebaseConfig);
+    const auth = getAuth(firebaseApp);
+    const db = getFirestore(firebaseApp);
+    const functions = getFunctions(firebaseApp, "asia-south1");
+    const generateVisitNote = httpsCallable(functions, "generateVisitNote", {
+      timeout: 540000
+    });
+    let currentDeviceRef = null;
+    let currentDeviceData = null;
+
+    const state = {
+      mediaRecorder: null,
+      stream: null,
+      chunks: [],
+      pendingBlob: null,
+      transcribeOnStop: false,
+      startedAt: 0,
+      elapsed: 0,
+      maxRecordingSeconds: 300,
+      timerId: null,
+      paused: false,
+      strict: false,
+      dark: false,
+      audioContext: null,
+      analyser: null,
+      animationId: null
+    };
+
+    const recordView = document.getElementById("recordView");
+    const processingView = document.getElementById("processingView");
+    const resultView = document.getElementById("resultView");
+    const recordCard = document.getElementById("recordCard");
+    const focusBox = document.getElementById("focusBox");
+    const controls = document.getElementById("controls");
+    const timer = document.getElementById("timer");
+    const status = document.getElementById("status");
+    const DEFAULT_RECORDING_SECONDS = 300;
+    const EXTEND_SECONDS = 300;
+    function showApprovedApp() {
+      const approvalGate = document.getElementById("approvalGate");
+      const app = document.getElementById("app");
+      approvalGate.classList.add("hidden");
+      app.classList.remove("locked");
+    }
+
+    function showApprovalGate() {
+      document.getElementById("approvalGate").classList.remove("hidden");
+      document.getElementById("app").classList.add("locked");
+    }
+
+    function showDeviceState(data) {
+      currentDeviceData = data;
+      const statusText = document.getElementById("approvalStatusText");
+      const message = document.getElementById("approvalMessage");
+      const registerButton = document.getElementById("registerDeviceButton");
+      if (!data) {
+        showApprovalGate();
+        statusText.textContent = "";
+        statusText.hidden = true;
+        message.textContent = "";
+        registerButton.disabled = false;
+        return;
+      }
+      document.getElementById("doctorName").value = data.doctorName || "";
+      document.getElementById("deviceName").value = data.deviceName || "";
+      if (data.status === "approved") {
+        showApprovedApp();
+        return;
+      }
+      if (data.status === "blocked") {
+        showApprovalGate();
+        statusText.hidden = false;
+        statusText.textContent = "This device has been blocked by the administrator.";
+        message.textContent = "Contact the administrator if access should be restored.";
+        registerButton.disabled = true;
+        return;
+      }
+      showApprovalGate();
+      statusText.hidden = false;
+      statusText.textContent = "Approval request submitted. Keep this page open or return later after the administrator approves it.";
+      message.textContent = "Status: Pending approval";
+      registerButton.disabled = true;
+    }
+
+    async function initializeDeviceApproval() {
+      const message = document.getElementById("approvalMessage");
+      try {
+        if (!auth.currentUser) await signInAnonymously(auth);
+        const user = auth.currentUser;
+        currentDeviceRef = doc(db, "devices", user.uid);
+        onSnapshot(currentDeviceRef, snapshot => {
+          showDeviceState(snapshot.exists() ? snapshot.data() : null);
+        }, error => {
+          message.textContent = `Unable to read device status: ${error.message}`;
+        });
+      } catch (error) {
+        message.textContent = `Firebase connection failed: ${error.message}`;
+      }
+    }
+
+    function icon(name) {
+      const icons = {
+        pause: '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"></path></svg>',
+        play: '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>',
+        stop: '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"></path></svg>',
+        restart: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 3v6h6"></path></svg>',
+        mic: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>'
+      };
+      return icons[name];
+    }
+
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+      const rest = Math.floor(seconds % 60).toString().padStart(2, "0");
+      return `${minutes}:${rest}`;
+    }
+
+    function remainingTime() {
+      return Math.max(0, state.maxRecordingSeconds - state.elapsed);
+    }
+
+    function setView(view) {
+      recordView.style.display = view === "record" ? "block" : "none";
+      processingView.classList.toggle("visible", view === "processing");
+      resultView.classList.toggle("visible", view === "result");
+      document.getElementById("newButton").classList.toggle("visible", view === "result");
+      if (view === "result") scheduleTextareaResize();
+    }
+
+    function updateTimer() {
+      state.elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
+      timer.textContent = formatTime(remainingTime());
+      if (state.elapsed >= state.maxRecordingSeconds) {
+        status.textContent = `${formatTime(state.maxRecordingSeconds)} limit reached. Generating note...`;
+        stopRecording(true);
+      }
+    }
+
+    async function startVisualization(stream) {
+      state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      state.analyser = state.audioContext.createAnalyser();
+      state.analyser.fftSize = 2048;
+      const source = state.audioContext.createMediaStreamSource(stream);
+      source.connect(state.analyser);
+    }
+
+    function setRecordingControls() {
+      controls.innerHTML = `
+        <span class="control-item pause-control">
+          <button class="round pause" id="pauseButton" type="button" title="Pause Recording" aria-label="Pause Recording">${icon("pause")}<span class="mobile-button-text" id="pauseButtonText">Pause</span></button>
+          <span class="control-label" id="pauseLabel">Pause</span>
+        </span>
+        <span class="control-item stop-control">
+          <button class="round stop" id="stopButton" type="button" title="Stop and Transcribe" aria-label="Stop and Transcribe">${icon("stop")}<span class="mobile-button-text">Stop &amp; transcribe</span></button>
+          <span class="control-label">Stop &amp; transcribe</span>
+        </span>
+        <span class="control-item extend-control">
+          <button class="extend-button" id="extendButton" type="button">Extend 5 min</button>
+        </span>
+        <span class="control-item refresh-control">
+          <button class="round discard" id="discardButton" type="button" title="Refresh and Restart" aria-label="Refresh and Restart">${icon("restart")}<span class="mobile-button-text">Refresh</span></button>
+          <span class="control-label">Refresh</span>
+        </span>
+      `;
+      document.getElementById("pauseButton").addEventListener("click", togglePause);
+      document.getElementById("stopButton").addEventListener("click", () => stopRecording(true));
+      document.getElementById("extendButton").addEventListener("click", extendRecording);
+      document.getElementById("discardButton").addEventListener("click", resetScribe);
+    }
+
+    function setIdleControls() {
+      controls.innerHTML = `
+        <span class="control-item start-control">
+          <button class="round record" id="recordButton" type="button" title="Start Recording" aria-label="Start Recording">${icon("mic")}<span class="mobile-button-text">Start recording</span></button>
+          <span class="control-label">Start recording</span>
+        </span>
+      `;
+      document.getElementById("recordButton").addEventListener("click", startRecording);
+    }
+
+    async function getMicrophoneStream() {
+      const reusableStream = state.stream && state.stream.getAudioTracks().some(track => track.readyState === "live");
+      if (!reusableStream) {
+        state.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        state.stream.getAudioTracks().forEach(track => {
+          track.addEventListener("ended", () => {
+            state.stream = null;
+          }, { once: true });
+        });
+      }
+      state.stream.getAudioTracks().forEach(track => {
+        track.enabled = true;
+      });
+      return state.stream;
+    }
+
+    async function startRecording() {
+      if (state.pendingBlob) {
+        status.textContent = "Press Enter to transcribe the completed recording.";
+        return;
+      }
+      try {
+        const microphoneStream = await getMicrophoneStream();
+        state.chunks = [];
+        state.transcribeOnStop = false;
+        state.paused = false;
+        state.maxRecordingSeconds = DEFAULT_RECORDING_SECONDS;
+        state.mediaRecorder = new MediaRecorder(microphoneStream);
+        state.mediaRecorder.ondataavailable = event => {
+          if (event.data.size > 0) state.chunks.push(event.data);
+        };
+        state.mediaRecorder.onstop = handleRecordingComplete;
+        state.mediaRecorder.start();
+        state.startedAt = Date.now();
+        state.timerId = setInterval(updateTimer, 1000);
+        timer.textContent = formatTime(state.maxRecordingSeconds);
+        status.textContent = "Recording in progress...";
+        focusBox.classList.add("recording");
+        setRecordingControls();
+        await startVisualization(microphoneStream);
+      } catch (error) {
+        status.textContent = "Microphone access denied. Please enable microphone permissions.";
+      }
+    }
+
+    function extendRecording() {
+      if (!state.mediaRecorder || state.mediaRecorder.state === "inactive") return;
+      state.maxRecordingSeconds += EXTEND_SECONDS;
+      timer.textContent = formatTime(remainingTime());
+      status.textContent = `Recording extended. ${formatTime(remainingTime())} remaining.`;
+    }
+
+    function updatePauseButton(paused) {
+      const pauseButton = document.getElementById("pauseButton");
+      const label = paused ? "Resume" : "Pause";
+      const title = paused ? "Resume Recording" : "Pause Recording";
+      pauseButton.innerHTML = `${icon(paused ? "play" : "pause")}<span class="mobile-button-text" id="pauseButtonText">${label}</span>`;
+      pauseButton.title = title;
+      pauseButton.setAttribute("aria-label", title);
+      document.getElementById("pauseLabel").textContent = label;
+    }
+
+    function togglePause() {
+      if (!state.mediaRecorder || state.mediaRecorder.state === "inactive") return;
+      if (state.mediaRecorder.state === "paused") {
+        state.mediaRecorder.resume();
+        state.paused = false;
+        state.startedAt = Date.now() - state.elapsed * 1000;
+        clearInterval(state.timerId);
+        state.timerId = setInterval(updateTimer, 1000);
+        status.textContent = "Recording in progress...";
+        updatePauseButton(false);
+        focusBox.classList.add("recording");
+      } else if (state.mediaRecorder.state === "recording") {
+        state.mediaRecorder.pause();
+        state.paused = true;
+        clearInterval(state.timerId);
+        cancelAnimationFrame(state.animationId);
+        status.textContent = "Recording paused";
+        updatePauseButton(true);
+        focusBox.classList.remove("recording");
+      }
+    }
+
+    function stopRecording(transcribeImmediately = false) {
+      if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+        state.transcribeOnStop = transcribeImmediately;
+        state.mediaRecorder.stop();
+      }
+    }
+
+    async function handleRecordingComplete() {
+      clearInterval(state.timerId);
+      cancelAnimationFrame(state.animationId);
+      if (state.audioContext) state.audioContext.close();
+      if (state.stream) {
+        state.stream.getAudioTracks().forEach(track => {
+          track.enabled = false;
+        });
+      }
+      const blob = new Blob(state.chunks, { type: "audio/webm" });
+      if (!blob.size) return;
+      state.pendingBlob = blob;
+      state.mediaRecorder = null;
+      state.paused = false;
+      focusBox.classList.remove("recording");
+      setIdleControls();
+      if (state.transcribeOnStop) {
+        await transcribePendingRecording();
+      } else {
+        status.textContent = "Recording stopped. Press Enter to transcribe.";
+      }
+    }
+
+    async function transcribePendingRecording() {
+      if (!state.pendingBlob) return;
+      const blob = state.pendingBlob;
+      state.pendingBlob = null;
+      await processAudio(blob);
+    }
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    function resizeTextarea(textarea) {
+      if (!textarea.offsetParent) return;
+      textarea.style.height = "1px";
+      textarea.style.height = `${Math.max(56, textarea.scrollHeight + 2)}px`;
+      textarea.style.overflowY = "hidden";
+    }
+
+    function resizeAllTextareas() {
+      document.querySelectorAll(".section textarea").forEach(resizeTextarea);
+    }
+
+    function scheduleTextareaResize() {
+      requestAnimationFrame(() => {
+        resizeAllTextareas();
+        requestAnimationFrame(resizeAllTextareas);
+      });
+    }
+
+    async function processWithSecureBackend(blob) {
+      const audioBase64 = await blobToBase64(blob);
+      const mimeType = blob.type || "audio/webm";
+      document.getElementById("processingText").textContent = "Preparing your visit note...";
+      const result = await generateVisitNote({
+        audioBase64,
+        mimeType,
+        strict: Boolean(state.strict)
+      });
+      return result.data;
+    }
+
+    async function processAudio(blob) {
+      setView("processing");
+      try {
+        const { report } = await processWithSecureBackend(blob);
+        fillReport(report);
+        document.getElementById("resultMessage").textContent = "";
+      } catch (error) {
+        fillReport({});
+        document.getElementById("resultMessage").textContent = error.message;
+      }
+      setView("result");
+    }
+
+    function fillReport(data) {
+      document.getElementById("patientName").value = data.patientName || "NIL";
+      document.getElementById("patientAge").value = data.patientAge || "NIL";
+      document.getElementById("patientSex").value = data.patientSex || "NIL";
+      document.getElementById("patientUhid").value = data.patientUhid || "NIL";
+      document.getElementById("presentingComplaint").value = data.presentingComplaint || "Generated presenting complaint will appear here.";
+      document.getElementById("historyOfPresentIllness").value = data.historyOfPresentIllness || "Generated history of present illness will appear here.";
+      document.getElementById("pastMedicalHistory").value = data.pastMedicalHistory || "NIL";
+      document.getElementById("allergies").value = data.allergies || "NIL";
+      document.getElementById("familyHistory").value = data.familyHistory || "NIL";
+      document.getElementById("personalHistory").value = data.personalHistory || "NIL";
+      document.getElementById("examinationFindings").value = data.examinationFindings || "NIL";
+      document.getElementById("currentMedication").value = data.currentMedication || "NIL";
+      document.getElementById("provisionalDiagnosis").value = data.provisionalDiagnosis || "NIL";
+      document.getElementById("treatmentPlan").value = data.treatmentPlan || "NIL";
+    }
+
+    function resetScribe() {
+      if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+        state.mediaRecorder.onstop = null;
+        state.mediaRecorder.stop();
+      }
+      clearInterval(state.timerId);
+      cancelAnimationFrame(state.animationId);
+      if (state.audioContext) state.audioContext.close();
+      if (state.stream) {
+        state.stream.getAudioTracks().forEach(track => {
+          track.enabled = false;
+        });
+      }
+      state.mediaRecorder = null;
+      state.chunks = [];
+      state.pendingBlob = null;
+      state.transcribeOnStop = false;
+      state.elapsed = 0;
+      state.maxRecordingSeconds = DEFAULT_RECORDING_SECONDS;
+      state.paused = false;
+      timer.textContent = formatTime(state.maxRecordingSeconds);
+      status.textContent = "Tap microphone to start dictation";
+      focusBox.classList.remove("recording");
+      setIdleControls();
+      setView("record");
+    }
+
+    window.addEventListener("beforeunload", () => {
+      if (state.stream) state.stream.getTracks().forEach(track => track.stop());
+    });
+
+    document.getElementById("strictToggle").addEventListener("click", () => {
+      state.strict = !state.strict;
+      document.getElementById("strictToggle").classList.toggle("active", state.strict);
+      document.getElementById("strictCheck").textContent = state.strict ? "✓" : "";
+      document.getElementById("strictHelp").style.display = state.strict ? "block" : "none";
+      recordCard.classList.toggle("strict", state.strict);
+    });
+
+    document.getElementById("settingsButton").addEventListener("click", () => {
+      document.getElementById("settings").classList.toggle("open");
+    });
+
+    document.getElementById("darkSwitch").addEventListener("click", event => {
+      state.dark = !state.dark;
+      document.body.classList.toggle("dark", state.dark);
+      event.currentTarget.classList.toggle("on", state.dark);
+    });
+
+    document.addEventListener("keydown", async event => {
+      const desktopKeyboardEnabled = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+      if (!desktopKeyboardEnabled) return;
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      const isEditing = target instanceof HTMLElement && (
+        target.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)
+      );
+      if (isEditing) return;
+
+      if (event.code === "Space") {
+        event.preventDefault();
+        if (processingView.classList.contains("visible") || resultView.classList.contains("visible")) return;
+        if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+          togglePause();
+        } else {
+          await startRecording();
+        }
+      }
+
+      if (event.key === "Enter") {
+        if (processingView.classList.contains("visible") || resultView.classList.contains("visible")) return;
+        if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+          event.preventDefault();
+          stopRecording(true);
+        } else if (state.pendingBlob) {
+          event.preventDefault();
+          await transcribePendingRecording();
+        }
+      }
+    });
+
+    const caseFields = [
+      ["Name", "patientName"],
+      ["Age", "patientAge"],
+      ["Sex", "patientSex"],
+      ["UHID", "patientUhid"],
+      ["1. Presenting Complaint", "presentingComplaint"],
+      ["2. History of Present Illness", "historyOfPresentIllness"],
+      ["3. Past Medical History", "pastMedicalHistory"],
+      ["4. Allergies", "allergies"],
+      ["5. Family History", "familyHistory"],
+      ["6. Personal History", "personalHistory"],
+      ["7. Examination Findings", "examinationFindings"],
+      ["8. Current Medication", "currentMedication"],
+      ["9. Provisional Diagnosis", "provisionalDiagnosis"],
+      ["10. Treatment Plan", "treatmentPlan"]
+    ];
+
+    async function copyCaseSheet({ omitNil, button, idleLabel }) {
+      const text = caseFields
+        .map(([title, id]) => [title, document.getElementById(id).value.trim()])
+        .filter(([, value]) => !omitNil || (value && value.toUpperCase() !== "NIL"))
+        .map(([title, value]) => `${title}\n${value || "NIL"}`)
+        .join("\n\n");
+      await navigator.clipboard.writeText(text);
+      button.textContent = "Copied";
+      setTimeout(() => button.textContent = idleLabel, 1400);
+    }
+
+    document.getElementById("copyButton").addEventListener("click", event => {
+      copyCaseSheet({ omitNil: false, button: event.currentTarget, idleLabel: "Copy All" });
+    });
+
+    document.getElementById("copyWithoutNilButton").addEventListener("click", event => {
+      copyCaseSheet({ omitNil: true, button: event.currentTarget, idleLabel: "Copy without NIL" });
+    });
+
+    document.getElementById("brandButton").addEventListener("click", resetScribe);
+    document.getElementById("newButton").addEventListener("click", resetScribe);
+    document.getElementById("registerDeviceButton").addEventListener("click", async event => {
+      const doctorName = document.getElementById("doctorName").value.trim();
+      const deviceName = document.getElementById("deviceName").value.trim();
+      const message = document.getElementById("approvalMessage");
+      if (!doctorName || !deviceName) {
+        message.textContent = "Enter the doctor's name and a recognizable device name.";
+        return;
+      }
+      if (!currentDeviceRef) {
+        message.textContent = "Still connecting to Firebase. Please try again.";
+        return;
+      }
+      event.currentTarget.disabled = true;
+      try {
+        await setDoc(currentDeviceRef, {
+          ownerUid: auth.currentUser.uid,
+          doctorName: doctorName.slice(0, 80),
+          deviceName: deviceName.slice(0, 80),
+          status: "pending",
+          registeredAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        message.textContent = "Status: Pending approval";
+      } catch (error) {
+        message.textContent = `Registration failed: ${error.message}`;
+        event.currentTarget.disabled = false;
+      }
+    });
+    localStorage.removeItem("doctor_woyz_api_key");
+    localStorage.removeItem("opd_demo_ai_model_v2");
+    document.querySelectorAll(".section textarea").forEach(textarea => {
+      textarea.addEventListener("input", () => resizeTextarea(textarea));
+    });
+    window.addEventListener("resize", scheduleTextareaResize);
+    setIdleControls();
+    scheduleTextareaResize();
+    initializeDeviceApproval();
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(error => {
+          console.warn("Service worker registration failed:", error);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

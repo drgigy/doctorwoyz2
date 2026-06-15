@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Doctor WOYZ device administration.">
+  <title>Doctor WOYZ Admin</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #fff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #dfe5ee;
+      --blue: #175cd3;
+      --green: #067647;
+      --amber: #b54708;
+      --red: #b42318;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input { font: inherit; }
+    .topbar { border-bottom: 1px solid var(--line); background: #fff; }
+    .topbar-inner {
+      width: min(100% - 32px, 1120px);
+      min-height: 64px;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 850; }
+    .mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      background: #172b4d;
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .admin-label { color: var(--muted); font-size: 13px; font-weight: 700; }
+    main { width: min(100% - 32px, 1120px); margin: 30px auto; }
+    h1 { margin: 0; font-size: 28px; }
+    .subtitle { margin: 7px 0 24px; color: var(--muted); }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 12px 32px rgba(16, 24, 40, .06);
+    }
+    .login { width: min(100%, 420px); margin: 10vh auto 0; padding: 26px; }
+    label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 750; }
+    input {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid #cfd6e1;
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-size: 16px;
+      outline: none;
+    }
+    input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px #dbe9ff; }
+    button {
+      min-height: 40px;
+      border: 0;
+      border-radius: 7px;
+      padding: 9px 13px;
+      cursor: pointer;
+      font-weight: 750;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .primary { color: #fff; background: var(--blue); }
+    .login .primary { width: 100%; margin-top: 16px; }
+    .message { min-height: 20px; margin: 12px 0 0; color: var(--red); font-size: 13px; }
+    .dashboard { display: none; }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .toolbar-actions { display: flex; gap: 8px; }
+    .summary { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .secondary { color: var(--blue); background: #eaf2ff; }
+    .logout { color: var(--red); background: #feeceb; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 790px; }
+    th, td {
+      padding: 15px 18px;
+      border-bottom: 1px solid #edf0f4;
+      text-align: left;
+      vertical-align: middle;
+      font-size: 13px;
+    }
+    th {
+      color: var(--muted);
+      background: #f8fafc;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    tr:last-child td { border-bottom: 0; }
+    .device-name { font-weight: 750; }
+    .muted { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .badge {
+      display: inline-flex;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: capitalize;
+    }
+    .badge.pending { color: var(--amber); background: #fff4e5; }
+    .badge.approved { color: var(--green); background: #e8f7ef; }
+    .badge.blocked { color: var(--red); background: #feeceb; }
+    .actions { display: flex; gap: 7px; }
+    .approve { color: var(--green); background: #e8f7ef; }
+    .block { color: var(--red); background: #feeceb; }
+    .pending-button { color: var(--amber); background: #fff4e5; }
+    .empty { padding: 50px 20px; color: var(--muted); text-align: center; }
+    @media (max-width: 640px) {
+      .topbar-inner, main { width: min(100% - 24px, 1120px); }
+      main { margin-top: 22px; }
+      h1 { font-size: 24px; }
+      .login { padding: 22px 18px; }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .toolbar-actions { display: grid; grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="mark">W</span><span>Doctor WOYZ</span></div>
+      <span class="admin-label">Device administration</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel login" id="loginView">
+      <h1>Administrator login</h1>
+      <p class="subtitle">Sign in with the Firebase administrator account.</p>
+      <form id="loginForm">
+        <label for="email">Email</label>
+        <input id="email" type="email" value="drgigy@gmail.com" autocomplete="username" readonly>
+        <label for="password" style="margin-top:16px;">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required>
+        <button class="primary" type="submit">Sign in</button>
+        <p class="message" id="loginMessage"></p>
+      </form>
+    </section>
+
+    <section class="dashboard" id="dashboardView">
+      <h1>Authorized devices</h1>
+      <p class="subtitle">Approve new requests and block devices that should no longer use the scribe.</p>
+      <div class="panel">
+        <div class="toolbar">
+          <span class="summary" id="summary">Loading devices...</span>
+          <div class="toolbar-actions">
+            <button class="secondary" id="refreshButton" type="button">Refresh</button>
+            <button class="logout" id="logoutButton" type="button">Sign out</button>
+          </div>
+        </div>
+        <div class="table-wrap" id="tableWrap"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+    import { getAuth, inMemoryPersistence, onAuthStateChanged, setPersistence, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+    import { collection, doc, getDocs, getFirestore, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: ["AIzaSyDaSqQLix", "jaib7hfsv9hsLzebWU_kZuLmY"].join(""),
+      authDomain: "woyz-be9e5.firebaseapp.com",
+      projectId: "woyz-be9e5",
+      storageBucket: "woyz-be9e5.firebasestorage.app",
+      messagingSenderId: "757935575451",
+      appId: "1:757935575451:web:4adba5f60e49346cce513e",
+      measurementId: "G-LBPXGJCKRB"
+    };
+
+    const app = initializeApp(firebaseConfig, "woyz-admin");
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const loginView = document.getElementById("loginView");
+    const dashboardView = document.getElementById("dashboardView");
+    const tableWrap = document.getElementById("tableWrap");
+    await setPersistence(auth, inMemoryPersistence);
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      })[character]);
+    }
+
+    function formatDate(value) {
+      if (!value) return "Never";
+      const date = typeof value.toDate === "function" ? value.toDate() : new Date(value);
+      return date.toLocaleString();
+    }
+
+    function renderDevices(devices) {
+      document.getElementById("summary").textContent =
+        `${devices.length} device${devices.length === 1 ? "" : "s"} · ${devices.filter(device => device.status === "pending").length} pending`;
+      if (!devices.length) {
+        tableWrap.innerHTML = '<div class="empty">No devices have requested access yet.</div>';
+        return;
+      }
+      tableWrap.innerHTML = `
+        <table>
+          <thead><tr><th>Device</th><th>Doctor</th><th>Registered</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${devices.map(device => `
+              <tr>
+                <td><div class="device-name">${escapeHtml(device.deviceName)}</div><div class="muted">${escapeHtml(device.id.slice(0, 10))}</div></td>
+                <td>${escapeHtml(device.doctorName)}</td>
+                <td>${escapeHtml(formatDate(device.registeredAt))}</td>
+                <td><span class="badge ${escapeHtml(device.status)}">${escapeHtml(device.status)}</span></td>
+                <td>
+                  <div class="actions">
+                    <button class="approve" data-id="${escapeHtml(device.id)}" data-status="approved" type="button">Approve</button>
+                    <button class="pending-button" data-id="${escapeHtml(device.id)}" data-status="pending" type="button">Pending</button>
+                    <button class="block" data-id="${escapeHtml(device.id)}" data-status="blocked" type="button">Block</button>
+                  </div>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>`;
+    }
+
+    async function loadDevices() {
+      const snapshot = await getDocs(collection(db, "devices"));
+      const devices = snapshot.docs
+        .map(item => ({ id: item.id, ...item.data() }))
+        .sort((a, b) => {
+          const aTime = a.registeredAt?.toMillis?.() || 0;
+          const bTime = b.registeredAt?.toMillis?.() || 0;
+          return bTime - aTime;
+        });
+      renderDevices(devices);
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const message = document.getElementById("loginMessage");
+      message.textContent = "";
+      try {
+        await signInWithEmailAndPassword(
+          auth,
+          document.getElementById("email").value,
+          document.getElementById("password").value
+        );
+        document.getElementById("password").value = "";
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    });
+
+    tableWrap.addEventListener("click", async event => {
+      const button = event.target.closest("button[data-id]");
+      if (!button) return;
+      button.disabled = true;
+      try {
+        await updateDoc(doc(db, "devices", button.dataset.id), {
+          status: button.dataset.status,
+          updatedAt: serverTimestamp()
+        });
+        await loadDevices();
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById("refreshButton").addEventListener("click", () => loadDevices().catch(error => alert(error.message)));
+    document.getElementById("logoutButton").addEventListener("click", () => signOut(auth));
+
+    onAuthStateChanged(auth, async user => {
+      const isAdmin = user?.email?.toLowerCase() === "drgigy@gmail.com";
+      loginView.style.display = isAdmin ? "none" : "block";
+      dashboardView.style.display = isAdmin ? "block" : "none";
+      if (user && !isAdmin) await signOut(auth);
+      if (isAdmin) {
+        try {
+          await loadDevices();
+        } catch (error) {
+          document.getElementById("summary").textContent = error.message;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

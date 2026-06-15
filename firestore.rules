@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email == "drgigy@gmail.com";
+    }
+
+    match /devices/{deviceId} {
+      allow create: if signedIn()
+        && request.auth.uid == deviceId
+        && request.resource.data.keys().hasOnly([
+          "ownerUid",
+          "doctorName",
+          "deviceName",
+          "status",
+          "registeredAt",
+          "updatedAt"
+        ])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.doctorName is string
+        && request.resource.data.doctorName.size() > 0
+        && request.resource.data.doctorName.size() <= 80
+        && request.resource.data.deviceName is string
+        && request.resource.data.deviceName.size() > 0
+        && request.resource.data.deviceName.size() <= 80
+        && request.resource.data.status == "pending";
+
+      allow read: if isAdmin()
+        || (signedIn() && request.auth.uid == deviceId);
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
