@@ -30,8 +30,7 @@ const REPORT_SCHEMA = {
   properties: Object.fromEntries(
     REPORT_FIELDS.map(field => [field, { type: "string" }])
   ),
-  required: REPORT_FIELDS,
-  additionalProperties: false
+  required: REPORT_FIELDS
 };
 
 function buildPrompt(strict) {
