@@ -315,6 +315,17 @@
       gap: 12px;
     }
 
+    .focus-extend {
+      display: none;
+      margin-top: 2px;
+    }
+
+    .focus-extend.visible {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
     .pulse-wrap {
       position: relative;
       width: 74px;
@@ -432,10 +443,6 @@
       background: #ea580c;
     }
 
-    .round.discard {
-      background: #0f172a;
-    }
-
     .extend-button {
       min-height: 44px;
       border: 1px solid #bfdbfe;
@@ -453,6 +460,24 @@
     .extend-button:hover {
       transform: translateY(-1px);
       filter: brightness(1.02);
+    }
+
+    .extend-button.alert {
+      border-color: #f59e0b;
+      color: #92400e;
+      background: #fef3c7;
+      animation: extendBlink 0.9s ease-in-out infinite;
+    }
+
+    @keyframes extendBlink {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35);
+        transform: scale(1);
+      }
+      50% {
+        box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+        transform: scale(1.04);
+      }
     }
 
     .timer {
@@ -618,6 +643,76 @@
       margin-top: 0;
     }
 
+    .training-field {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .training-entry {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .training-entry input {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: var(--bg);
+      font: 500 13px/1.45 Inter, system-ui, sans-serif;
+      outline: none;
+    }
+
+    .training-entry input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .add-training-button {
+      min-width: 42px;
+      border: 0;
+      border-radius: 10px;
+      color: #ffffff;
+      background: var(--blue);
+      font-size: 20px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .training-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .training-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+      border: 1px solid #bfdbfe;
+      border-radius: 999px;
+      color: var(--blue-dark);
+      background: #eff6ff;
+      padding: 6px 9px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .training-chip button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0;
+    }
+
     .remove-key {
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -777,6 +872,19 @@
       gap: 16px;
     }
 
+    .dictation-result {
+      display: none;
+    }
+
+    .dictation-result.visible {
+      display: block;
+    }
+
+    .dictation-result textarea {
+      min-height: 300px;
+      resize: vertical;
+    }
+
     .section {
       min-width: 0;
       padding: 20px;
@@ -931,10 +1039,6 @@
         padding: 18px;
       }
 
-      .strict-row {
-        display: none;
-      }
-
       .controls {
         width: 100%;
         display: grid;
@@ -977,9 +1081,7 @@
         border-radius: 14px;
       }
 
-      .start-control,
-      .pause-control,
-      .extend-control {
+      .start-control {
         grid-column: 1 / -1;
       }
 
@@ -988,26 +1090,15 @@
         grid-row: 1;
       }
 
-      .refresh-control {
+      .pause-control {
         grid-column: 2;
         grid-row: 1;
       }
 
-      .pause-control {
-        grid-row: 2;
-      }
-
-      .extend-control {
-        grid-row: 3;
-      }
-
       .extend-button {
-        width: 100%;
-        height: 76px;
-        min-height: 76px;
-        border-radius: 12px;
-        padding: 10px 14px;
-        font-size: 16px;
+        min-height: 42px;
+        border-radius: 10px;
+        font-size: 14px;
       }
 
       .timer {
@@ -1126,6 +1217,9 @@
               </div>
               <div class="timer-label">Remaining</div>
               <div class="timer" id="timer">05:00</div>
+              <button class="extend-button focus-extend" id="extendButton" type="button">
+                + Extend 5 min
+              </button>
             </div>
           </div>
           <div class="controls" id="controls">
@@ -1143,8 +1237,8 @@
         <label class="strict-row" id="strictToggle">
           <span class="checkbox" id="strictCheck"></span>
           <span>
-            Strict Dictation Mode
-            <span id="strictHelp" style="display:none; font-size:11px; font-weight:600; color:#60a5fa;">Word-for-word transcription with grammar checks</span>
+            Review Dictation Mode
+            <span id="strictHelp" style="display:none; font-size:11px; font-weight:600; color:#60a5fa;">Transcribes into one editable note instead of the visit-note template</span>
           </span>
         </label>
 
@@ -1163,16 +1257,19 @@
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h8"></path></svg>
             </span>
             <div>
-              <h2>Visit Note</h2>
+              <h2 id="resultHeading">Visit Note</h2>
               <p class="result-message" id="resultMessage"></p>
             </div>
           </div>
-          <div class="result-actions">
+          <div class="result-actions" id="visitNoteActions">
             <button class="copy-button" id="copyWithoutNilButton" type="button">Copy without NIL</button>
             <button class="copy-button" id="copyButton" type="button">Copy All</button>
           </div>
+          <div class="result-actions" id="dictationActions" style="display:none;">
+            <button class="copy-button" id="copyDictationButton" type="button">Copy Dictation</button>
+          </div>
         </div>
-        <div class="result-grid">
+        <div class="result-grid" id="visitNoteResult">
           <div class="section patient-detail">
             <h3>Name</h3>
             <textarea id="patientName">NIL</textarea>
@@ -1218,16 +1315,26 @@
             <textarea id="examinationFindings">NIL</textarea>
           </div>
           <div class="section full">
-            <h3>8. Current Medication</h3>
+            <h3>8. Review of Investigations</h3>
+            <textarea id="reviewOfInvestigations">NIL</textarea>
+          </div>
+          <div class="section full">
+            <h3>9. Current Medication</h3>
             <textarea id="currentMedication">NIL</textarea>
           </div>
           <div class="section full diagnosis">
-            <h3>9. Provisional Diagnosis</h3>
+            <h3>10. Provisional Diagnosis</h3>
             <textarea id="provisionalDiagnosis">Awaiting generated provisional diagnosis.</textarea>
           </div>
           <div class="section full">
-            <h3>10. Treatment Plan</h3>
+            <h3>11. Treatment Plan</h3>
             <textarea id="treatmentPlan">Awaiting generated treatment plan.</textarea>
+          </div>
+        </div>
+        <div class="dictation-result" id="dictationResult">
+          <div class="section full">
+            <h3>Review Dictation</h3>
+            <textarea id="dictationText" placeholder="Your transcribed review note will appear here."></textarea>
           </div>
         </div>
       </section>
@@ -1240,7 +1347,15 @@
           <span>Dark Mode</span>
           <button class="switch" id="darkSwitch" type="button" aria-label="Toggle dark mode"><span></span></button>
         </div>
-        <p class="key-status">AI processing is securely connected.</p>
+        <div class="training-field">
+          <p class="settings-title">Training Words</p>
+          <div class="training-entry">
+            <input id="trainingWordInput" type="text" autocomplete="off" aria-label="Training word">
+            <button class="add-training-button" id="addTrainingWordButton" type="button" aria-label="Add training word">+</button>
+          </div>
+          <div class="training-list" id="trainingWordsList"></div>
+        </div>
+        <p class="key-status" id="trainingStatus">AI processing is securely connected.</p>
       </div>
       <button class="settings-button" id="settingsButton" type="button" title="Settings">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.52a2 2 0 0 1-1 1.72l-.15.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.52a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -1273,6 +1388,9 @@
     });
     let currentDeviceRef = null;
     let currentDeviceData = null;
+    let trainingRef = null;
+    let trainingUnsubscribe = null;
+    let trainingWordsCache = [];
 
     const state = {
       mediaRecorder: null,
@@ -1307,6 +1425,7 @@
       const app = document.getElementById("app");
       approvalGate.classList.add("hidden");
       app.classList.remove("locked");
+      startTrainingSync();
     }
 
     function showApprovalGate() {
@@ -1354,6 +1473,7 @@
         if (!auth.currentUser) await signInAnonymously(auth);
         const user = auth.currentUser;
         currentDeviceRef = doc(db, "devices", user.uid);
+        trainingRef = doc(db, "settings", "trainingWords");
         onSnapshot(currentDeviceRef, snapshot => {
           showDeviceState(snapshot.exists() ? snapshot.data() : null);
         }, error => {
@@ -1369,7 +1489,6 @@
         pause: '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"></path></svg>',
         play: '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>',
         stop: '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"></path></svg>',
-        restart: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 3v6h6"></path></svg>',
         mic: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>'
       };
       return icons[name];
@@ -1397,9 +1516,21 @@
       state.elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
       timer.textContent = formatTime(remainingTime());
       if (state.elapsed >= state.maxRecordingSeconds) {
-        status.textContent = `${formatTime(state.maxRecordingSeconds)} limit reached. Generating note...`;
-        stopRecording(true);
+        pauseForExtension();
       }
+    }
+
+    function pauseForExtension() {
+      if (!state.mediaRecorder || state.mediaRecorder.state !== "recording") return;
+      state.mediaRecorder.pause();
+      state.paused = true;
+      clearInterval(state.timerId);
+      cancelAnimationFrame(state.animationId);
+      timer.textContent = "00:00";
+      status.textContent = "5 minute limit reached. Tap Extend 5 min to continue, or Stop & transcribe when ready.";
+      document.getElementById("extendButton").classList.add("alert");
+      updatePauseButton(true);
+      focusBox.classList.remove("recording");
     }
 
     async function startVisualization(stream) {
@@ -1420,18 +1551,10 @@
           <button class="round stop" id="stopButton" type="button" title="Stop and Transcribe" aria-label="Stop and Transcribe">${icon("stop")}<span class="mobile-button-text">Stop &amp; transcribe</span></button>
           <span class="control-label">Stop &amp; transcribe</span>
         </span>
-        <span class="control-item extend-control">
-          <button class="extend-button" id="extendButton" type="button">Extend 5 min</button>
-        </span>
-        <span class="control-item refresh-control">
-          <button class="round discard" id="discardButton" type="button" title="Refresh and Restart" aria-label="Refresh and Restart">${icon("restart")}<span class="mobile-button-text">Refresh</span></button>
-          <span class="control-label">Refresh</span>
-        </span>
       `;
       document.getElementById("pauseButton").addEventListener("click", togglePause);
       document.getElementById("stopButton").addEventListener("click", () => stopRecording(true));
-      document.getElementById("extendButton").addEventListener("click", extendRecording);
-      document.getElementById("discardButton").addEventListener("click", resetScribe);
+      document.getElementById("extendButton").classList.add("visible");
     }
 
     function setIdleControls() {
@@ -1491,7 +1614,18 @@
 
     function extendRecording() {
       if (!state.mediaRecorder || state.mediaRecorder.state === "inactive") return;
+      document.activeElement?.blur?.();
       state.maxRecordingSeconds += EXTEND_SECONDS;
+      document.getElementById("extendButton").classList.remove("alert");
+      if (state.mediaRecorder.state === "paused") {
+        state.mediaRecorder.resume();
+        state.paused = false;
+        updatePauseButton(false);
+        focusBox.classList.add("recording");
+      }
+      state.startedAt = Date.now() - state.elapsed * 1000;
+      clearInterval(state.timerId);
+      state.timerId = setInterval(updateTimer, 1000);
       timer.textContent = formatTime(remainingTime());
       status.textContent = `Recording extended. ${formatTime(remainingTime())} remaining.`;
     }
@@ -1515,6 +1649,7 @@
         clearInterval(state.timerId);
         state.timerId = setInterval(updateTimer, 1000);
         status.textContent = "Recording in progress...";
+        document.getElementById("extendButton").classList.remove("alert");
         updatePauseButton(false);
         focusBox.classList.add("recording");
       } else if (state.mediaRecorder.state === "recording") {
@@ -1531,6 +1666,7 @@
     function stopRecording(transcribeImmediately = false) {
       if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
         state.transcribeOnStop = transcribeImmediately;
+        document.getElementById("extendButton").classList.remove("visible", "alert");
         state.mediaRecorder.stop();
       }
     }
@@ -1595,11 +1731,11 @@
     async function processWithSecureBackend(blob) {
       const audioBase64 = await blobToBase64(blob);
       const mimeType = blob.type || "audio/webm";
-      document.getElementById("processingText").textContent = "Preparing your visit note...";
       const result = await generateVisitNote({
         audioBase64,
         mimeType,
-        strict: Boolean(state.strict)
+        mode: state.strict ? "dictation" : "visitNote",
+        training: getTrainingData()
       });
       return result.data;
     }
@@ -1607,17 +1743,47 @@
     async function processAudio(blob) {
       setView("processing");
       try {
-        const { report } = await processWithSecureBackend(blob);
-        fillReport(report);
+        document.getElementById("processingText").textContent = state.strict
+          ? "Transcribing your review dictation..."
+          : "Preparing your visit note...";
+        const result = await processWithSecureBackend(blob);
+        if (result.mode === "dictation") {
+          showDictationResult(result.text);
+        } else {
+          showVisitNoteResult(result.report);
+        }
         document.getElementById("resultMessage").textContent = "";
       } catch (error) {
-        fillReport({});
+        if (state.strict) {
+          showDictationResult("");
+        } else {
+          showVisitNoteResult({});
+        }
         console.error("Visit note generation failed:", error);
         const message = error?.message || "The visit note could not be generated.";
         document.getElementById("resultMessage").textContent =
           `${message} Your recording was not saved; please return and try again.`;
       }
       setView("result");
+    }
+
+    function showVisitNoteResult(report) {
+      document.getElementById("resultHeading").textContent = "Visit Note";
+      document.getElementById("visitNoteActions").style.display = "";
+      document.getElementById("dictationActions").style.display = "none";
+      document.getElementById("visitNoteResult").style.display = "";
+      document.getElementById("dictationResult").classList.remove("visible");
+      fillReport(report);
+    }
+
+    function showDictationResult(text) {
+      document.getElementById("resultHeading").textContent = "Review Dictation";
+      document.getElementById("visitNoteActions").style.display = "none";
+      document.getElementById("dictationActions").style.display = "";
+      document.getElementById("visitNoteResult").style.display = "none";
+      document.getElementById("dictationResult").classList.add("visible");
+      document.getElementById("dictationText").value = text || "";
+      scheduleTextareaResize();
     }
 
     function fillReport(data) {
@@ -1632,6 +1798,7 @@
       document.getElementById("familyHistory").value = data.familyHistory || "NIL";
       document.getElementById("personalHistory").value = data.personalHistory || "NIL";
       document.getElementById("examinationFindings").value = data.examinationFindings || "NIL";
+      document.getElementById("reviewOfInvestigations").value = data.reviewOfInvestigations || "NIL";
       document.getElementById("currentMedication").value = data.currentMedication || "NIL";
       document.getElementById("provisionalDiagnosis").value = data.provisionalDiagnosis || "NIL";
       document.getElementById("treatmentPlan").value = data.treatmentPlan || "NIL";
@@ -1657,9 +1824,16 @@
       state.elapsed = 0;
       state.maxRecordingSeconds = DEFAULT_RECORDING_SECONDS;
       state.paused = false;
+      state.strict = false;
       timer.textContent = formatTime(state.maxRecordingSeconds);
       status.textContent = "Tap microphone to start dictation";
       focusBox.classList.remove("recording");
+      document.getElementById("extendButton").classList.remove("visible", "alert");
+      document.getElementById("strictToggle").classList.remove("active");
+      document.getElementById("strictCheck").textContent = "";
+      document.getElementById("strictHelp").style.display = "none";
+      document.querySelector(".intro").textContent = "Record the doctor-patient conversation and convert it into a structured OPD visit note.";
+      recordCard.classList.remove("strict");
       setIdleControls();
       setView("record");
     }
@@ -1673,6 +1847,9 @@
       document.getElementById("strictToggle").classList.toggle("active", state.strict);
       document.getElementById("strictCheck").textContent = state.strict ? "✓" : "";
       document.getElementById("strictHelp").style.display = state.strict ? "block" : "none";
+      document.querySelector(".intro").textContent = state.strict
+        ? "Dictate a review update and convert it into one editable clinical note."
+        : "Record the doctor-patient conversation and convert it into a structured OPD visit note.";
       recordCard.classList.toggle("strict", state.strict);
     });
 
@@ -1690,6 +1867,17 @@
       const desktopKeyboardEnabled = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
       if (!desktopKeyboardEnabled) return;
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      const recordingActive = state.mediaRecorder && state.mediaRecorder.state !== "inactive";
+      if (recordingActive && event.code === "Space") {
+        event.preventDefault();
+        togglePause();
+        return;
+      }
+      if (recordingActive && event.key === "Enter") {
+        event.preventDefault();
+        stopRecording(true);
+        return;
+      }
       const target = event.target;
       const isEditing = target instanceof HTMLElement && (
         target.isContentEditable ||
@@ -1700,19 +1888,12 @@
       if (event.code === "Space") {
         event.preventDefault();
         if (processingView.classList.contains("visible") || resultView.classList.contains("visible")) return;
-        if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
-          togglePause();
-        } else {
-          await startRecording();
-        }
+        await startRecording();
       }
 
       if (event.key === "Enter") {
         if (processingView.classList.contains("visible") || resultView.classList.contains("visible")) return;
-        if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
-          event.preventDefault();
-          stopRecording(true);
-        } else if (state.pendingBlob) {
+        if (state.pendingBlob) {
           event.preventDefault();
           await transcribePendingRecording();
         }
@@ -1731,9 +1912,10 @@
       ["5. Family History", "familyHistory"],
       ["6. Personal History", "personalHistory"],
       ["7. Examination Findings", "examinationFindings"],
-      ["8. Current Medication", "currentMedication"],
-      ["9. Provisional Diagnosis", "provisionalDiagnosis"],
-      ["10. Treatment Plan", "treatmentPlan"]
+      ["8. Review of Investigations", "reviewOfInvestigations"],
+      ["9. Current Medication", "currentMedication"],
+      ["10. Provisional Diagnosis", "provisionalDiagnosis"],
+      ["11. Treatment Plan", "treatmentPlan"]
     ];
 
     async function copyCaseSheet({ omitNil, button, idleLabel }) {
@@ -1753,6 +1935,132 @@
 
     document.getElementById("copyWithoutNilButton").addEventListener("click", event => {
       copyCaseSheet({ omitNil: true, button: event.currentTarget, idleLabel: "Copy without NIL" });
+    });
+
+    document.getElementById("copyDictationButton").addEventListener("click", async event => {
+      await navigator.clipboard.writeText(document.getElementById("dictationText").value.trim());
+      event.currentTarget.textContent = "Copied";
+      setTimeout(() => event.currentTarget.textContent = "Copy Dictation", 1400);
+    });
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[character]));
+    }
+
+    function getTrainingData() {
+      return {
+        terms: getTrainingWords().join("\n").slice(0, 1500)
+      };
+    }
+
+    function getTrainingWords() {
+      return normalizeTrainingWords(trainingWordsCache);
+    }
+
+    function normalizeTrainingWords(words) {
+      return Array.isArray(words)
+        ? words
+            .filter(word => typeof word === "string" && word.trim())
+            .map(word => word.trim().slice(0, 80))
+            .filter((word, index, list) => list.findIndex(item => item.toLowerCase() === word.toLowerCase()) === index)
+            .slice(0, 120)
+        : [];
+    }
+
+    function getLocalTrainingWords() {
+      try {
+        return normalizeTrainingWords(JSON.parse(localStorage.getItem("doctor_woyz_training_words") || "[]"));
+      } catch {
+        return [];
+      }
+    }
+
+    async function saveTrainingWords(words) {
+      const normalizedWords = normalizeTrainingWords(words);
+      trainingWordsCache = normalizedWords;
+      localStorage.setItem("doctor_woyz_training_words", JSON.stringify(normalizedWords));
+      renderTrainingWords();
+      if (!trainingRef || !auth.currentUser) return;
+      await setDoc(trainingRef, {
+        words: normalizedWords,
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser.uid
+      }, { merge: true });
+    }
+
+    function startTrainingSync() {
+      if (!trainingRef || trainingUnsubscribe) return;
+      trainingUnsubscribe = onSnapshot(trainingRef, async snapshot => {
+        if (snapshot.exists()) {
+          trainingWordsCache = normalizeTrainingWords(snapshot.data().words);
+          localStorage.setItem("doctor_woyz_training_words", JSON.stringify(trainingWordsCache));
+          renderTrainingWords();
+          document.getElementById("trainingStatus").textContent = "Training words synced across devices.";
+          return;
+        }
+        const localWords = getLocalTrainingWords();
+        trainingWordsCache = localWords;
+        renderTrainingWords();
+        if (localWords.length) {
+          await saveTrainingWords(localWords);
+        }
+      }, error => {
+        trainingWordsCache = getLocalTrainingWords();
+        renderTrainingWords();
+        document.getElementById("trainingStatus").textContent = `Training sync unavailable: ${error.message}`;
+      });
+    }
+
+    function renderTrainingWords() {
+      const list = document.getElementById("trainingWordsList");
+      const words = getTrainingWords();
+      list.innerHTML = words.map((word, index) => `
+        <span class="training-chip">
+          <span>${escapeHtml(word)}</span>
+          <button type="button" data-training-index="${index}" aria-label="Remove ${escapeHtml(word)}">×</button>
+        </span>
+      `).join("");
+    }
+
+    async function addTrainingWord() {
+      const input = document.getElementById("trainingWordInput");
+      const word = input.value.trim();
+      if (!word) return;
+      const words = getTrainingWords();
+      if (!words.some(item => item.toLowerCase() === word.toLowerCase())) {
+        words.push(word.slice(0, 80));
+        await saveTrainingWords(words);
+      }
+      input.value = "";
+      const status = document.getElementById("trainingStatus");
+      status.textContent = "Training word saved across devices.";
+      setTimeout(() => {
+        status.textContent = trainingRef
+          ? "Training words synced across devices."
+          : "AI processing is securely connected.";
+      }, 1800);
+    }
+
+    document.getElementById("addTrainingWordButton").addEventListener("click", addTrainingWord);
+    document.getElementById("trainingWordInput").addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addTrainingWord();
+      }
+    });
+    document.getElementById("trainingWordsList").addEventListener("click", async event => {
+      const button = event.target.closest("button[data-training-index]");
+      if (!button) return;
+      const index = Number(button.dataset.trainingIndex);
+      const words = getTrainingWords();
+      words.splice(index, 1);
+      await saveTrainingWords(words);
     });
 
     document.getElementById("brandButton").addEventListener("click", resetScribe);
@@ -1787,9 +2095,12 @@
     });
     localStorage.removeItem("doctor_woyz_api_key");
     localStorage.removeItem("opd_demo_ai_model_v2");
+    trainingWordsCache = getLocalTrainingWords();
+    renderTrainingWords();
     document.querySelectorAll(".section textarea").forEach(textarea => {
       textarea.addEventListener("input", () => resizeTextarea(textarea));
     });
+    document.getElementById("extendButton").addEventListener("click", extendRecording);
     window.addEventListener("resize", scheduleTextareaResize);
     setIdleControls();
     scheduleTextareaResize();
