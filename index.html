@@ -290,6 +290,10 @@
       padding: clamp(22px, 4vw, 32px);
     }
 
+    .card:focus {
+      outline: none;
+    }
+
     .card.strict {
       background: color-mix(in srgb, var(--panel) 82%, #dbeafe);
       border-color: #bfdbfe;
@@ -1010,15 +1014,16 @@
 
       .controls {
         width: 100%;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
         gap: 12px;
-        min-height: 0;
+        min-height: 72px;
       }
 
       .control-item {
-        width: 100%;
-        gap: 0;
+        width: auto;
+        gap: 6px;
       }
 
       .control-label {
@@ -1026,42 +1031,24 @@
       }
 
       .mobile-button-text {
-        display: inline;
-        font-size: 16px;
-        font-weight: 800;
+        display: none;
       }
 
       .round {
-        width: 100%;
-        height: 76px;
+        width: 64px;
+        height: 64px;
         min-width: 0;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        padding: 10px 12px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        padding: 0;
         box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
       }
 
       .round.record {
-        width: 100%;
-        height: 112px;
-        border-radius: 14px;
-      }
-
-      .start-control {
-        grid-column: 1 / -1;
-      }
-
-      .stop-control {
-        grid-column: 1;
-        grid-row: 1;
-      }
-
-      .pause-control {
-        grid-column: 2;
-        grid-row: 1;
+        width: 76px;
+        height: 76px;
+        border-radius: 999px;
       }
 
       .extend-button {
@@ -1177,7 +1164,7 @@
     <main>
       <section class="center" id="recordView">
         <p class="intro">Record the doctor-patient conversation and convert it into a structured OPD visit note.</p>
-        <div class="card" id="recordCard">
+        <div class="card" id="recordCard" tabindex="-1">
           <div class="focus-box" id="focusBox">
             <div class="focus-inner">
               <div class="pulse-wrap" aria-hidden="true">
@@ -1474,6 +1461,23 @@
       return Math.max(0, state.maxRecordingSeconds - state.elapsed);
     }
 
+    function focusKeyboardShortcuts() {
+      if (!recordCard) return;
+      try {
+        recordCard.focus({ preventScroll: true });
+      } catch (error) {
+        recordCard.focus();
+      }
+    }
+
+    function isSpaceKey(event) {
+      return event.code === "Space" || event.key === " " || event.key === "Spacebar";
+    }
+
+    function isEnterKey(event) {
+      return event.key === "Enter" || event.code === "Enter" || event.code === "NumpadEnter";
+    }
+
     function setView(view) {
       recordView.style.display = view === "record" ? "block" : "none";
       processingView.classList.toggle("visible", view === "processing");
@@ -1501,6 +1505,7 @@
       document.getElementById("extendButton").classList.add("alert");
       updatePauseButton(true);
       focusBox.classList.remove("recording");
+      focusKeyboardShortcuts();
     }
 
     async function startVisualization(stream) {
@@ -1576,6 +1581,7 @@
         status.textContent = "Recording in progress...";
         focusBox.classList.add("recording");
         setRecordingControls();
+        focusKeyboardShortcuts();
         await startVisualization(microphoneStream);
       } catch (error) {
         status.textContent = "Microphone access denied. Please enable microphone permissions.";
@@ -1584,7 +1590,6 @@
 
     function extendRecording() {
       if (!state.mediaRecorder || state.mediaRecorder.state === "inactive") return;
-      document.activeElement?.blur?.();
       state.maxRecordingSeconds += EXTEND_SECONDS;
       document.getElementById("extendButton").classList.remove("alert");
       if (state.mediaRecorder.state === "paused") {
@@ -1598,6 +1603,7 @@
       state.timerId = setInterval(updateTimer, 1000);
       timer.textContent = formatTime(remainingTime());
       status.textContent = `Recording extended. ${formatTime(remainingTime())} remaining.`;
+      focusKeyboardShortcuts();
     }
 
     function updatePauseButton(paused) {
@@ -1622,6 +1628,7 @@
         document.getElementById("extendButton").classList.remove("alert");
         updatePauseButton(false);
         focusBox.classList.add("recording");
+        focusKeyboardShortcuts();
       } else if (state.mediaRecorder.state === "recording") {
         state.mediaRecorder.pause();
         state.paused = true;
@@ -1630,6 +1637,7 @@
         status.textContent = "Recording paused";
         updatePauseButton(true);
         focusBox.classList.remove("recording");
+        focusKeyboardShortcuts();
       }
     }
 
@@ -1834,16 +1842,17 @@
     });
 
     document.addEventListener("keydown", async event => {
-      const desktopKeyboardEnabled = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-      if (!desktopKeyboardEnabled) return;
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      const spaceKey = isSpaceKey(event);
+      const enterKey = isEnterKey(event);
+      if (!spaceKey && !enterKey) return;
       const recordingActive = state.mediaRecorder && state.mediaRecorder.state !== "inactive";
-      if (recordingActive && event.code === "Space") {
+      if (recordingActive && spaceKey) {
         event.preventDefault();
         togglePause();
         return;
       }
-      if (recordingActive && event.key === "Enter") {
+      if (recordingActive && enterKey) {
         event.preventDefault();
         stopRecording(true);
         return;
@@ -1855,13 +1864,13 @@
       );
       if (isEditing) return;
 
-      if (event.code === "Space") {
+      if (spaceKey) {
         event.preventDefault();
         if (processingView.classList.contains("visible") || resultView.classList.contains("visible")) return;
         await startRecording();
       }
 
-      if (event.key === "Enter") {
+      if (enterKey) {
         if (processingView.classList.contains("visible") || resultView.classList.contains("visible")) return;
         if (state.pendingBlob) {
           event.preventDefault();
@@ -1875,18 +1884,33 @@
       ["Age", "patientAge"],
       ["Sex", "patientSex"],
       ["UHID", "patientUhid"],
-      ["1. Presenting Complaint", "presentingComplaint"],
-      ["2. History of Present Illness", "historyOfPresentIllness"],
-      ["3. Past Medical History", "pastMedicalHistory"],
-      ["4. Allergies", "allergies"],
-      ["5. Family History", "familyHistory"],
-      ["6. Personal History", "personalHistory"],
-      ["7. Examination Findings", "examinationFindings"],
-      ["8. Review of Investigations", "reviewOfInvestigations"],
-      ["9. Current Medication", "currentMedication"],
-      ["10. Provisional Diagnosis", "provisionalDiagnosis"],
-      ["11. Treatment Plan", "treatmentPlan"]
+      ["Presenting Complaint", "presentingComplaint"],
+      ["History of Present Illness", "historyOfPresentIllness"],
+      ["Past Medical History", "pastMedicalHistory"],
+      ["Allergies", "allergies"],
+      ["Family History", "familyHistory"],
+      ["Personal History", "personalHistory"],
+      ["Examination Findings", "examinationFindings"],
+      ["Review of Investigations", "reviewOfInvestigations"],
+      ["Current Medication", "currentMedication"],
+      ["Provisional Diagnosis", "provisionalDiagnosis"],
+      ["Treatment Plan", "treatmentPlan"]
     ];
+
+    async function writeClipboardText(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
 
     async function copyCaseSheet({ omitNil, button, idleLabel }) {
       const text = caseFields
@@ -1894,8 +1918,8 @@
         .filter(([, value]) => !omitNil || (value && value.toUpperCase() !== "NIL"))
         .map(([title, value]) => `${title}\n${value || "NIL"}`)
         .join("\n\n");
-      await navigator.clipboard.writeText(text);
       button.textContent = "Copied";
+      await writeClipboardText(text);
       setTimeout(() => button.textContent = idleLabel, 1400);
     }
 
@@ -1908,9 +1932,18 @@
     });
 
     document.getElementById("copyDictationButton").addEventListener("click", async event => {
-      await navigator.clipboard.writeText(document.getElementById("dictationText").value.trim());
-      event.currentTarget.textContent = "Copied";
-      setTimeout(() => event.currentTarget.textContent = "Copy Dictation", 1400);
+      const button = event.currentTarget;
+      button.textContent = "Copied";
+      button.disabled = true;
+      setTimeout(() => {
+        button.textContent = "Copy Dictation";
+        button.disabled = false;
+      }, 1400);
+      try {
+        await writeClipboardText(document.getElementById("dictationText").value.trim());
+      } catch (error) {
+        console.warn("Copy dictation failed:", error);
+      }
     });
 
     function escapeHtml(value) {
@@ -2038,7 +2071,13 @@
     });
     document.getElementById("extendButton").addEventListener("click", extendRecording);
     window.addEventListener("resize", scheduleTextareaResize);
+    window.addEventListener("load", focusKeyboardShortcuts);
+    window.addEventListener("pageshow", focusKeyboardShortcuts);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) focusKeyboardShortcuts();
+    });
     setIdleControls();
+    focusKeyboardShortcuts();
     scheduleTextareaResize();
     initializeDeviceApproval();
     if ("serviceWorker" in navigator) {
