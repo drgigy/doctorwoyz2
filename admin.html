@@ -99,6 +99,7 @@
     .secondary { color: var(--blue); background: #eaf2ff; }
     .logout { color: var(--red); background: #feeceb; }
     .table-wrap { overflow-x: auto; }
+    .admin-section { margin-top: 26px; }
     table { width: 100%; border-collapse: collapse; min-width: 790px; }
     th, td {
       padding: 15px 18px;
@@ -131,6 +132,7 @@
     .approve { color: var(--green); background: #e8f7ef; }
     .block { color: var(--red); background: #feeceb; }
     .pending-button { color: var(--amber); background: #fff4e5; }
+    .reject { color: var(--red); background: #feeceb; }
     .empty { padding: 50px 20px; color: var(--muted); text-align: center; }
     @media (max-width: 640px) {
       .topbar-inner, main { width: min(100% - 24px, 1120px); }
@@ -177,13 +179,23 @@
         </div>
         <div class="table-wrap" id="tableWrap"></div>
       </div>
+
+      <div class="panel admin-section">
+        <div class="toolbar">
+          <span class="summary" id="trainingSummary">Loading training words...</span>
+          <div class="toolbar-actions">
+            <button class="secondary" id="refreshTrainingButton" type="button">Refresh Words</button>
+          </div>
+        </div>
+        <div class="table-wrap" id="trainingTableWrap"></div>
+      </div>
     </section>
   </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
     import { getAuth, inMemoryPersistence, onAuthStateChanged, setPersistence, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-    import { collection, doc, getDocs, getFirestore, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    import { collection, doc, getDoc, getDocs, getFirestore, serverTimestamp, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: ["AIzaSyDaSqQLix", "jaib7hfsv9hsLzebWU_kZuLmY"].join(""),
@@ -201,6 +213,7 @@
     const loginView = document.getElementById("loginView");
     const dashboardView = document.getElementById("dashboardView");
     const tableWrap = document.getElementById("tableWrap");
+    const trainingTableWrap = document.getElementById("trainingTableWrap");
     await setPersistence(auth, inMemoryPersistence);
 
     function escapeHtml(value) {
@@ -257,6 +270,76 @@
       renderDevices(devices);
     }
 
+    function renderTrainingSubmissions(submissions) {
+      document.getElementById("trainingSummary").textContent =
+        `${submissions.length} training word${submissions.length === 1 ? "" : "s"} pending approval`;
+      if (!submissions.length) {
+        trainingTableWrap.innerHTML = '<div class="empty">No training words are pending approval.</div>';
+        return;
+      }
+      trainingTableWrap.innerHTML = `
+        <table>
+          <thead><tr><th>Word</th><th>Submitted By</th><th>Submitted</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${submissions.map(item => `
+              <tr>
+                <td><div class="device-name">${escapeHtml(item.word)}</div></td>
+                <td>${escapeHtml(item.doctorName || item.deviceName || item.submittedBy || "")}</td>
+                <td>${escapeHtml(formatDate(item.submittedAt))}</td>
+                <td>
+                  <div class="actions">
+                    <button class="approve" data-training-id="${escapeHtml(item.id)}" data-word="${escapeHtml(item.word)}" data-action="approve" type="button">Approve</button>
+                    <button class="reject" data-training-id="${escapeHtml(item.id)}" data-action="reject" type="button">Reject</button>
+                  </div>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>`;
+    }
+
+    async function loadTrainingSubmissions() {
+      const snapshot = await getDocs(collection(db, "trainingSubmissions"));
+      const submissions = snapshot.docs
+        .map(item => ({ id: item.id, ...item.data() }))
+        .filter(item => item.status === "pending")
+        .sort((a, b) => {
+          const aTime = a.submittedAt?.toMillis?.() || 0;
+          const bTime = b.submittedAt?.toMillis?.() || 0;
+          return bTime - aTime;
+        });
+      renderTrainingSubmissions(submissions);
+    }
+
+    function normalizeWords(words) {
+      return Array.isArray(words)
+        ? words
+            .filter(word => typeof word === "string" && word.trim())
+            .map(word => word.trim().slice(0, 80))
+            .filter((word, index, list) => list.findIndex(item => item.toLowerCase() === word.toLowerCase()) === index)
+            .slice(0, 120)
+        : [];
+    }
+
+    async function approveTrainingWord(id, word) {
+      const trainingRef = doc(db, "settings", "trainingWords");
+      const snapshot = await getDoc(trainingRef);
+      const words = normalizeWords(snapshot.exists() ? snapshot.data().words : []);
+      if (!words.some(item => item.toLowerCase() === word.toLowerCase())) {
+        words.push(word.slice(0, 80));
+      }
+      await setDoc(trainingRef, {
+        words: normalizeWords(words),
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser.uid
+      }, { merge: true });
+      await updateDoc(doc(db, "trainingSubmissions", id), {
+        status: "approved",
+        reviewedAt: serverTimestamp(),
+        reviewedBy: auth.currentUser.uid
+      });
+    }
+
     document.getElementById("loginForm").addEventListener("submit", async event => {
       event.preventDefault();
       const message = document.getElementById("loginMessage");
@@ -290,7 +373,30 @@
       }
     });
 
+    trainingTableWrap.addEventListener("click", async event => {
+      const button = event.target.closest("button[data-training-id]");
+      if (!button) return;
+      button.disabled = true;
+      try {
+        if (button.dataset.action === "approve") {
+          await approveTrainingWord(button.dataset.trainingId, button.dataset.word);
+        } else {
+          await updateDoc(doc(db, "trainingSubmissions", button.dataset.trainingId), {
+            status: "rejected",
+            reviewedAt: serverTimestamp(),
+            reviewedBy: auth.currentUser.uid
+          });
+        }
+        await loadTrainingSubmissions();
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    });
+
     document.getElementById("refreshButton").addEventListener("click", () => loadDevices().catch(error => alert(error.message)));
+    document.getElementById("refreshTrainingButton").addEventListener("click", () => loadTrainingSubmissions().catch(error => alert(error.message)));
     document.getElementById("logoutButton").addEventListener("click", () => signOut(auth));
 
     onAuthStateChanged(auth, async user => {
@@ -301,6 +407,7 @@
       if (isAdmin) {
         try {
           await loadDevices();
+          await loadTrainingSubmissions();
         } catch (error) {
           document.getElementById("summary").textContent = error.message;
         }
