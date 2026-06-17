@@ -11,6 +11,12 @@ service cloud.firestore {
         && request.auth.token.email == "drgigy@gmail.com";
     }
 
+    function isApprovedDevice() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/devices/$(request.auth.uid))
+        && get(/databases/$(database)/documents/devices/$(request.auth.uid)).data.status == "approved";
+    }
+
     match /devices/{deviceId} {
       allow create: if signedIn()
         && request.auth.uid == deviceId
@@ -35,6 +41,41 @@ service cloud.firestore {
         || (signedIn() && request.auth.uid == deviceId);
 
       allow update, delete: if isAdmin();
+    }
+
+    match /settings/trainingWords {
+      allow read: if isAdmin() || isApprovedDevice();
+
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          "words",
+          "updatedAt",
+          "updatedBy"
+        ])
+        && request.resource.data.words is list
+        && request.resource.data.words.size() <= 120
+        && request.resource.data.updatedBy == request.auth.uid;
+
+      allow delete: if isAdmin();
+    }
+
+    match /trainingSubmissions/{submissionId} {
+      allow create: if isApprovedDevice()
+        && request.resource.data.keys().hasOnly([
+          "word",
+          "status",
+          "submittedAt",
+          "submittedBy",
+          "doctorName",
+          "deviceName"
+        ])
+        && request.resource.data.word is string
+        && request.resource.data.word.size() > 0
+        && request.resource.data.word.size() <= 80
+        && request.resource.data.status == "pending"
+        && request.resource.data.submittedBy == request.auth.uid;
+
+      allow read, update, delete: if isAdmin();
     }
 
     match /{document=**} {

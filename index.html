@@ -682,37 +682,6 @@
       cursor: pointer;
     }
 
-    .training-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .training-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      max-width: 100%;
-      border: 1px solid #bfdbfe;
-      border-radius: 999px;
-      color: var(--blue-dark);
-      background: #eff6ff;
-      padding: 6px 9px;
-      font-size: 12px;
-      font-weight: 750;
-    }
-
-    .training-chip button {
-      border: 0;
-      background: transparent;
-      color: inherit;
-      cursor: pointer;
-      font-size: 14px;
-      line-height: 1;
-      padding: 0;
-    }
-
     .remove-key {
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -1353,7 +1322,6 @@
             <input id="trainingWordInput" type="text" autocomplete="off" aria-label="Training word">
             <button class="add-training-button" id="addTrainingWordButton" type="button" aria-label="Add training word">+</button>
           </div>
-          <div class="training-list" id="trainingWordsList"></div>
         </div>
         <p class="key-status" id="trainingStatus">AI processing is securely connected.</p>
       </div>
@@ -1366,7 +1334,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-    import { doc, getFirestore, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    import { addDoc, collection, doc, getFirestore, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-functions.js";
 
     const firebaseConfig = {
@@ -1389,6 +1357,7 @@
     let currentDeviceRef = null;
     let currentDeviceData = null;
     let trainingRef = null;
+    let trainingSubmissionsRef = null;
     let trainingUnsubscribe = null;
     let trainingWordsCache = [];
 
@@ -1474,6 +1443,7 @@
         const user = auth.currentUser;
         currentDeviceRef = doc(db, "devices", user.uid);
         trainingRef = doc(db, "settings", "trainingWords");
+        trainingSubmissionsRef = collection(db, "trainingSubmissions");
         onSnapshot(currentDeviceRef, snapshot => {
           showDeviceState(snapshot.exists() ? snapshot.data() : null);
         }, error => {
@@ -1981,68 +1951,44 @@
       }
     }
 
-    async function saveTrainingWords(words) {
-      const normalizedWords = normalizeTrainingWords(words);
-      trainingWordsCache = normalizedWords;
-      localStorage.setItem("doctor_woyz_training_words", JSON.stringify(normalizedWords));
-      renderTrainingWords();
-      if (!trainingRef || !auth.currentUser) return;
-      await setDoc(trainingRef, {
-        words: normalizedWords,
-        updatedAt: serverTimestamp(),
-        updatedBy: auth.currentUser.uid
-      }, { merge: true });
-    }
-
     function startTrainingSync() {
       if (!trainingRef || trainingUnsubscribe) return;
-      trainingUnsubscribe = onSnapshot(trainingRef, async snapshot => {
+      trainingUnsubscribe = onSnapshot(trainingRef, snapshot => {
         if (snapshot.exists()) {
           trainingWordsCache = normalizeTrainingWords(snapshot.data().words);
           localStorage.setItem("doctor_woyz_training_words", JSON.stringify(trainingWordsCache));
-          renderTrainingWords();
-          document.getElementById("trainingStatus").textContent = "Training words synced across devices.";
+          document.getElementById("trainingStatus").textContent = "Approved training glossary synced.";
           return;
         }
-        const localWords = getLocalTrainingWords();
-        trainingWordsCache = localWords;
-        renderTrainingWords();
-        if (localWords.length) {
-          await saveTrainingWords(localWords);
-        }
+        trainingWordsCache = getLocalTrainingWords();
       }, error => {
         trainingWordsCache = getLocalTrainingWords();
-        renderTrainingWords();
         document.getElementById("trainingStatus").textContent = `Training sync unavailable: ${error.message}`;
       });
-    }
-
-    function renderTrainingWords() {
-      const list = document.getElementById("trainingWordsList");
-      const words = getTrainingWords();
-      list.innerHTML = words.map((word, index) => `
-        <span class="training-chip">
-          <span>${escapeHtml(word)}</span>
-          <button type="button" data-training-index="${index}" aria-label="Remove ${escapeHtml(word)}">×</button>
-        </span>
-      `).join("");
     }
 
     async function addTrainingWord() {
       const input = document.getElementById("trainingWordInput");
       const word = input.value.trim();
       if (!word) return;
-      const words = getTrainingWords();
-      if (!words.some(item => item.toLowerCase() === word.toLowerCase())) {
-        words.push(word.slice(0, 80));
-        await saveTrainingWords(words);
+      if (!trainingSubmissionsRef || !auth.currentUser) {
+        document.getElementById("trainingStatus").textContent = "Still connecting. Please try again.";
+        return;
       }
+      await addDoc(trainingSubmissionsRef, {
+        word: word.slice(0, 80),
+        status: "pending",
+        submittedAt: serverTimestamp(),
+        submittedBy: auth.currentUser.uid,
+        doctorName: currentDeviceData?.doctorName || "",
+        deviceName: currentDeviceData?.deviceName || ""
+      });
       input.value = "";
       const status = document.getElementById("trainingStatus");
-      status.textContent = "Training word saved across devices.";
+      status.textContent = "Training word submitted for admin approval.";
       setTimeout(() => {
-        status.textContent = trainingRef
-          ? "Training words synced across devices."
+        status.textContent = trainingSubmissionsRef
+          ? "Approved training glossary synced."
           : "AI processing is securely connected.";
       }, 1800);
     }
@@ -2054,15 +2000,6 @@
         addTrainingWord();
       }
     });
-    document.getElementById("trainingWordsList").addEventListener("click", async event => {
-      const button = event.target.closest("button[data-training-index]");
-      if (!button) return;
-      const index = Number(button.dataset.trainingIndex);
-      const words = getTrainingWords();
-      words.splice(index, 1);
-      await saveTrainingWords(words);
-    });
-
     document.getElementById("brandButton").addEventListener("click", resetScribe);
     document.getElementById("newButton").addEventListener("click", resetScribe);
     document.getElementById("registerDeviceButton").addEventListener("click", async event => {
@@ -2096,7 +2033,6 @@
     localStorage.removeItem("doctor_woyz_api_key");
     localStorage.removeItem("opd_demo_ai_model_v2");
     trainingWordsCache = getLocalTrainingWords();
-    renderTrainingWords();
     document.querySelectorAll(".section textarea").forEach(textarea => {
       textarea.addEventListener("input", () => resizeTextarea(textarea));
     });
