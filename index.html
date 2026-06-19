@@ -528,6 +528,58 @@
       color: #ffffff;
     }
 
+    .mode-panel {
+      margin: 22px auto 0;
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+    }
+
+    .mode-toggle {
+      border: 1px solid #bfdbfe;
+      border-radius: 999px;
+      color: var(--blue-dark);
+      background: #eff6ff;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    .mode-toggle.active {
+      color: #ffffff;
+      background: var(--blue);
+      border-color: var(--blue);
+    }
+
+    .dictation-options {
+      display: none;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .dictation-options.visible {
+      display: flex;
+    }
+
+    .mode-option {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--panel);
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    .mode-option.active {
+      color: #ffffff;
+      background: var(--indigo);
+      border-color: var(--indigo);
+    }
+
     .pills {
       margin-top: 24px;
       display: flex;
@@ -671,6 +723,30 @@
     }
 
     .training-entry input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .credentials-field {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .credentials-field textarea {
+      width: 100%;
+      min-height: 96px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: var(--bg);
+      font: 500 13px/1.45 Inter, system-ui, sans-serif;
+      outline: none;
+      resize: vertical;
+    }
+
+    .credentials-field textarea:focus {
       border-color: var(--blue);
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
     }
@@ -856,6 +932,14 @@
     .dictation-result textarea {
       min-height: 300px;
       resize: vertical;
+    }
+
+    .prescription-result {
+      display: none;
+    }
+
+    .prescription-result.visible {
+      display: block;
     }
 
     .section {
@@ -1163,7 +1247,7 @@
 
     <main>
       <section class="center" id="recordView">
-        <p class="intro">Record the doctor-patient conversation and convert it into a structured OPD visit note.</p>
+        <p class="intro">Ambient Mode</p>
         <div class="card" id="recordCard" tabindex="-1">
           <div class="focus-box" id="focusBox">
             <div class="focus-inner">
@@ -1190,13 +1274,14 @@
           <div class="status" id="status">Tap microphone to start dictation</div>
         </div>
 
-        <label class="strict-row" id="strictToggle">
-          <span class="checkbox" id="strictCheck"></span>
-          <span>
-            Review Dictation Mode
-            <span id="strictHelp" style="display:none; font-size:11px; font-weight:600; color:#60a5fa;">Transcribes into one editable note instead of the visit-note template</span>
-          </span>
-        </label>
+        <div class="mode-panel">
+          <button class="mode-toggle" id="dictationModeToggle" type="button">Dictation Mode</button>
+          <div class="dictation-options" id="dictationOptions">
+            <button class="mode-option active" data-dictation-mode="reviewDictation" type="button">Review Dictation</button>
+            <button class="mode-option" data-dictation-mode="visitDictation" type="button">Visit Note</button>
+            <button class="mode-option" data-dictation-mode="prescription" type="button">Prescription</button>
+          </div>
+        </div>
 
       </section>
 
@@ -1220,9 +1305,15 @@
           <div class="result-actions" id="visitNoteActions">
             <button class="copy-button" id="copyWithoutNilButton" type="button">Copy without NIL</button>
             <button class="copy-button" id="copyButton" type="button">Copy All</button>
+            <button class="copy-button" id="printVisitButton" type="button">Print</button>
           </div>
           <div class="result-actions" id="dictationActions" style="display:none;">
             <button class="copy-button" id="copyDictationButton" type="button">Copy Dictation</button>
+            <button class="copy-button" id="printDictationButton" type="button">Print</button>
+          </div>
+          <div class="result-actions" id="prescriptionActions" style="display:none;">
+            <button class="copy-button" id="copyPrescriptionButton" type="button">Copy Prescription</button>
+            <button class="copy-button" id="printPrescriptionButton" type="button">Print</button>
           </div>
         </div>
         <div class="result-grid" id="visitNoteResult">
@@ -1293,6 +1384,38 @@
             <textarea id="dictationText" placeholder="Your transcribed review note will appear here."></textarea>
           </div>
         </div>
+        <div class="prescription-result" id="prescriptionResult">
+          <div class="result-grid">
+            <div class="section patient-detail">
+              <h3>Date</h3>
+              <textarea id="prescriptionDate">NIL</textarea>
+            </div>
+            <div class="section patient-detail">
+              <h3>Name</h3>
+              <textarea id="prescriptionName">NIL</textarea>
+            </div>
+            <div class="section patient-detail">
+              <h3>Age</h3>
+              <textarea id="prescriptionAge">NIL</textarea>
+            </div>
+            <div class="section patient-detail">
+              <h3>Sex</h3>
+              <textarea id="prescriptionSex">NIL</textarea>
+            </div>
+            <div class="section patient-detail">
+              <h3>UHID</h3>
+              <textarea id="prescriptionUhid">NIL</textarea>
+            </div>
+            <div class="section full">
+              <h3>Medications / Advice</h3>
+              <textarea id="prescriptionMedications">NIL</textarea>
+            </div>
+            <div class="section full">
+              <h3>Doctor Credentials</h3>
+              <textarea id="prescriptionCredentials" placeholder="Add doctor credentials in Settings."></textarea>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -1309,6 +1432,10 @@
             <input id="trainingWordInput" type="text" autocomplete="off" aria-label="Training word">
             <button class="add-training-button" id="addTrainingWordButton" type="button" aria-label="Add training word">+</button>
           </div>
+        </div>
+        <div class="credentials-field">
+          <p class="settings-title">Doctor Credentials</p>
+          <textarea id="doctorCredentialsInput" placeholder="Doctor name&#10;Qualifications&#10;Registration number&#10;Clinic / hospital address"></textarea>
         </div>
         <p class="key-status" id="trainingStatus">AI processing is securely connected.</p>
       </div>
@@ -1359,7 +1486,9 @@
       maxRecordingSeconds: 300,
       timerId: null,
       paused: false,
-      strict: false,
+      inputMode: "ambient",
+      dictationMode: "reviewDictation",
+      resultMode: "ambient",
       dark: false,
       audioContext: null,
       analyser: null,
@@ -1484,6 +1613,30 @@
       resultView.classList.toggle("visible", view === "result");
       document.getElementById("newButton").classList.toggle("visible", view === "result");
       if (view === "result") scheduleTextareaResize();
+    }
+
+    function getBackendMode() {
+      return state.inputMode === "ambient" ? "ambient" : state.dictationMode;
+    }
+
+    function getModeLabel() {
+      if (state.inputMode === "ambient") return "Ambient Mode";
+      return {
+        reviewDictation: "Dictation Mode - Review Dictation",
+        visitDictation: "Dictation Mode - Visit Note",
+        prescription: "Dictation Mode - Prescription"
+      }[state.dictationMode] || "Dictation Mode";
+    }
+
+    function updateModeUi() {
+      const dictationActive = state.inputMode === "dictation";
+      document.getElementById("dictationModeToggle").classList.toggle("active", dictationActive);
+      document.getElementById("dictationOptions").classList.toggle("visible", dictationActive);
+      document.querySelectorAll("[data-dictation-mode]").forEach(button => {
+        button.classList.toggle("active", button.dataset.dictationMode === state.dictationMode);
+      });
+      document.querySelector(".intro").textContent = dictationActive ? getModeLabel() : "Ambient Mode";
+      recordCard.classList.toggle("strict", dictationActive);
     }
 
     function updateTimer() {
@@ -1712,7 +1865,7 @@
       const result = await generateVisitNote({
         audioBase64,
         mimeType,
-        mode: state.strict ? "dictation" : "visitNote",
+        mode: getBackendMode(),
         training: getTrainingData()
       });
       return result.data;
@@ -1721,21 +1874,29 @@
     async function processAudio(blob) {
       setView("processing");
       try {
-        document.getElementById("processingText").textContent = state.strict
-          ? "Transcribing your review dictation..."
-          : "Preparing your visit note...";
+        const backendMode = getBackendMode();
+        document.getElementById("processingText").textContent =
+          backendMode === "reviewDictation"
+            ? "Transcribing your review dictation..."
+            : backendMode === "prescription"
+              ? "Preparing your prescription..."
+              : "Preparing your visit note...";
         const result = await processWithSecureBackend(blob);
-        if (result.mode === "dictation") {
+        if (result.mode === "reviewDictation") {
           showDictationResult(result.text);
+        } else if (result.mode === "prescription") {
+          showPrescriptionResult(result.prescription);
         } else {
-          showVisitNoteResult(result.report);
+          showVisitNoteResult(result.report, result.mode);
         }
         document.getElementById("resultMessage").textContent = "";
       } catch (error) {
-        if (state.strict) {
+        if (getBackendMode() === "reviewDictation") {
           showDictationResult("");
+        } else if (getBackendMode() === "prescription") {
+          showPrescriptionResult({});
         } else {
-          showVisitNoteResult({});
+          showVisitNoteResult({}, getBackendMode());
         }
         console.error("Visit note generation failed:", error);
         const message = error?.message || "The visit note could not be generated.";
@@ -1745,23 +1906,71 @@
       setView("result");
     }
 
-    function showVisitNoteResult(report) {
-      document.getElementById("resultHeading").textContent = "Visit Note";
+    function showVisitNoteResult(report, mode = "ambient") {
+      state.resultMode = mode;
+      document.getElementById("resultHeading").textContent = mode === "visitDictation" ? "Visit Note" : "Ambient Visit Note";
       document.getElementById("visitNoteActions").style.display = "";
       document.getElementById("dictationActions").style.display = "none";
+      document.getElementById("prescriptionActions").style.display = "none";
       document.getElementById("visitNoteResult").style.display = "";
       document.getElementById("dictationResult").classList.remove("visible");
+      document.getElementById("prescriptionResult").classList.remove("visible");
+      applyVisitLabels(mode);
       fillReport(report);
     }
 
     function showDictationResult(text) {
+      state.resultMode = "reviewDictation";
       document.getElementById("resultHeading").textContent = "Review Dictation";
       document.getElementById("visitNoteActions").style.display = "none";
       document.getElementById("dictationActions").style.display = "";
+      document.getElementById("prescriptionActions").style.display = "none";
       document.getElementById("visitNoteResult").style.display = "none";
       document.getElementById("dictationResult").classList.add("visible");
+      document.getElementById("prescriptionResult").classList.remove("visible");
       document.getElementById("dictationText").value = text || "";
       scheduleTextareaResize();
+    }
+
+    function showPrescriptionResult(data = {}) {
+      state.resultMode = "prescription";
+      document.getElementById("resultHeading").textContent = "Prescription";
+      document.getElementById("visitNoteActions").style.display = "none";
+      document.getElementById("dictationActions").style.display = "none";
+      document.getElementById("prescriptionActions").style.display = "";
+      document.getElementById("visitNoteResult").style.display = "none";
+      document.getElementById("dictationResult").classList.remove("visible");
+      document.getElementById("prescriptionResult").classList.add("visible");
+      document.getElementById("prescriptionDate").value = data.date || new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+      document.getElementById("prescriptionName").value = data.patientName || "NIL";
+      document.getElementById("prescriptionAge").value = data.patientAge || "NIL";
+      document.getElementById("prescriptionSex").value = data.patientSex || "NIL";
+      document.getElementById("prescriptionUhid").value = data.patientUhid || "NIL";
+      document.getElementById("prescriptionMedications").value = data.medicationsAdvised || "NIL";
+      document.getElementById("prescriptionCredentials").value = getDoctorCredentials();
+      scheduleTextareaResize();
+    }
+
+    function applyVisitLabels(mode) {
+      const labels = mode === "visitDictation"
+        ? {
+            presentingComplaint: "Chief Complaints",
+            historyOfPresentIllness: "History of Present Illness",
+            examinationFindings: "Physical Examination",
+            provisionalDiagnosis: "Diagnosis",
+            treatmentPlan: "Orders"
+          }
+        : {
+            presentingComplaint: "1. Presenting Complaint",
+            historyOfPresentIllness: "2. History of Present Illness",
+            examinationFindings: "7. Examination Findings",
+            provisionalDiagnosis: "10. Provisional Diagnosis",
+            treatmentPlan: "11. Treatment Plan"
+          };
+      Object.entries(labels).forEach(([id, label]) => {
+        const heading = document.getElementById(id).closest(".section").querySelector("h3");
+        heading.textContent = label;
+      });
     }
 
     function fillReport(data) {
@@ -1802,16 +2011,14 @@
       state.elapsed = 0;
       state.maxRecordingSeconds = DEFAULT_RECORDING_SECONDS;
       state.paused = false;
-      state.strict = false;
+      state.inputMode = "ambient";
+      state.dictationMode = "reviewDictation";
+      state.resultMode = "ambient";
       timer.textContent = formatTime(state.maxRecordingSeconds);
       status.textContent = "Tap microphone to start dictation";
       focusBox.classList.remove("recording");
       document.getElementById("extendButton").classList.remove("visible", "alert");
-      document.getElementById("strictToggle").classList.remove("active");
-      document.getElementById("strictCheck").textContent = "";
-      document.getElementById("strictHelp").style.display = "none";
-      document.querySelector(".intro").textContent = "Record the doctor-patient conversation and convert it into a structured OPD visit note.";
-      recordCard.classList.remove("strict");
+      updateModeUi();
       setIdleControls();
       setView("record");
     }
@@ -1820,15 +2027,19 @@
       if (state.stream) state.stream.getTracks().forEach(track => track.stop());
     });
 
-    document.getElementById("strictToggle").addEventListener("click", () => {
-      state.strict = !state.strict;
-      document.getElementById("strictToggle").classList.toggle("active", state.strict);
-      document.getElementById("strictCheck").textContent = state.strict ? "✓" : "";
-      document.getElementById("strictHelp").style.display = state.strict ? "block" : "none";
-      document.querySelector(".intro").textContent = state.strict
-        ? "Dictate a review update and convert it into one editable clinical note."
-        : "Record the doctor-patient conversation and convert it into a structured OPD visit note.";
-      recordCard.classList.toggle("strict", state.strict);
+    document.getElementById("dictationModeToggle").addEventListener("click", () => {
+      state.inputMode = state.inputMode === "ambient" ? "dictation" : "ambient";
+      updateModeUi();
+      focusKeyboardShortcuts();
+    });
+
+    document.querySelectorAll("[data-dictation-mode]").forEach(button => {
+      button.addEventListener("click", () => {
+        state.inputMode = "dictation";
+        state.dictationMode = button.dataset.dictationMode;
+        updateModeUi();
+        focusKeyboardShortcuts();
+      });
     });
 
     document.getElementById("settingsButton").addEventListener("click", () => {
@@ -1897,6 +2108,53 @@
       ["Treatment Plan", "treatmentPlan"]
     ];
 
+    const visitDictationFields = [
+      ["Name", "patientName"],
+      ["Age", "patientAge"],
+      ["Sex", "patientSex"],
+      ["UHID", "patientUhid"],
+      ["Chief Complaints", "presentingComplaint"],
+      ["History of Present Illness", "historyOfPresentIllness"],
+      ["Physical Examination", "examinationFindings"],
+      ["Diagnosis", "provisionalDiagnosis"],
+      ["Review of Investigations", "reviewOfInvestigations"],
+      ["Allergies", "allergies"],
+      ["Current Medications", "currentMedication"],
+      ["Orders", "treatmentPlan"]
+    ];
+
+    const prescriptionFields = [
+      ["Date", "prescriptionDate"],
+      ["Name", "prescriptionName"],
+      ["Age", "prescriptionAge"],
+      ["Sex", "prescriptionSex"],
+      ["UHID", "prescriptionUhid"],
+      ["Medications / Advice", "prescriptionMedications"],
+      ["Doctor Credentials", "prescriptionCredentials"]
+    ];
+
+    function getDoctorCredentials() {
+      return localStorage.getItem("doctor_woyz_doctor_credentials") || "";
+    }
+
+    function setDoctorCredentials(value) {
+      localStorage.setItem("doctor_woyz_doctor_credentials", value);
+      const prescriptionBox = document.getElementById("prescriptionCredentials");
+      if (prescriptionBox && state.resultMode === "prescription") prescriptionBox.value = value;
+    }
+
+    function activeVisitFields() {
+      return state.resultMode === "visitDictation" ? visitDictationFields : caseFields;
+    }
+
+    function collectFields(fields, omitNil = false) {
+      return fields
+        .map(([title, id]) => [title, document.getElementById(id).value.trim()])
+        .filter(([, value]) => !omitNil || (value && value.toUpperCase() !== "NIL"))
+        .map(([title, value]) => `${title}\n${value || "NIL"}`)
+        .join("\n\n");
+    }
+
     async function writeClipboardText(text) {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
@@ -1912,15 +2170,83 @@
       textarea.remove();
     }
 
-    async function copyCaseSheet({ omitNil, button, idleLabel }) {
-      const text = caseFields
-        .map(([title, id]) => [title, document.getElementById(id).value.trim()])
-        .filter(([, value]) => !omitNil || (value && value.toUpperCase() !== "NIL"))
-        .map(([title, value]) => `${title}\n${value || "NIL"}`)
-        .join("\n\n");
+    async function copyCaseSheet({ omitNil, button, idleLabel, fields }) {
+      const text = collectFields(fields || activeVisitFields(), omitNil);
       button.textContent = "Copied";
       await writeClipboardText(text);
       setTimeout(() => button.textContent = idleLabel, 1400);
+    }
+
+    function formatHtmlText(value) {
+      return escapeHtml(value || "NIL").replace(/\n/g, "<br>");
+    }
+
+    function printDocument({ title, sections, prescription = false }) {
+      const body = prescription
+        ? `
+          <div class="rx-head">
+            <h1>Prescription</h1>
+            <div>${formatHtmlText(document.getElementById("prescriptionDate").value.trim())}</div>
+          </div>
+          <div class="patient-line">
+            <span><strong>Name:</strong> ${formatHtmlText(document.getElementById("prescriptionName").value.trim())}</span>
+            <span><strong>Age:</strong> ${formatHtmlText(document.getElementById("prescriptionAge").value.trim())}</span>
+            <span><strong>Sex:</strong> ${formatHtmlText(document.getElementById("prescriptionSex").value.trim())}</span>
+            <span><strong>UHID:</strong> ${formatHtmlText(document.getElementById("prescriptionUhid").value.trim())}</span>
+          </div>
+          <h2>Medications / Advice</h2>
+          <div class="content">${formatHtmlText(document.getElementById("prescriptionMedications").value.trim())}</div>
+          <div class="credentials">${formatHtmlText(document.getElementById("prescriptionCredentials").value.trim())}</div>
+        `
+        : sections.map(([heading, value]) => `
+          <section>
+            <h2>${escapeHtml(heading)}</h2>
+            <div class="content">${formatHtmlText(value)}</div>
+          </section>
+        `).join("");
+      const printWindow = window.open("", "_blank", "width=900,height=700");
+      if (!printWindow) return;
+      printWindow.document.write(`
+        <!doctype html>
+        <html>
+          <head>
+            <title>${escapeHtml(title)}</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #111827; margin: 36px; line-height: 1.45; }
+              h1 { margin: 0 0 18px; color: #1f3f8f; font-size: 26px; }
+              h2 { margin: 18px 0 6px; color: #334155; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+              section { break-inside: avoid; margin-bottom: 12px; }
+              .content { white-space: normal; font-size: 15px; }
+              .rx-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #d0d5dd; padding-bottom: 12px; margin-bottom: 18px; }
+              .patient-line { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; margin-bottom: 22px; }
+              .credentials { margin-top: 70px; white-space: normal; text-align: right; font-size: 14px; }
+              @media print { body { margin: 24mm 18mm; } button { display: none; } }
+            </style>
+          </head>
+          <body>${prescription ? body : `<h1>${escapeHtml(title)}</h1>${body}`}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 250);
+    }
+
+    function printVisitNote() {
+      const sections = activeVisitFields()
+        .map(([title, id]) => [title, document.getElementById(id).value.trim()])
+        .filter(([, value]) => value && value.toUpperCase() !== "NIL");
+      printDocument({ title: state.resultMode === "visitDictation" ? "Visit Note" : "Ambient Visit Note", sections });
+    }
+
+    function printDictation() {
+      printDocument({
+        title: "Review Dictation",
+        sections: [["Review Dictation", document.getElementById("dictationText").value.trim()]]
+      });
+    }
+
+    function printPrescription() {
+      printDocument({ title: "Prescription", prescription: true });
     }
 
     document.getElementById("copyButton").addEventListener("click", event => {
@@ -1945,6 +2271,19 @@
         console.warn("Copy dictation failed:", error);
       }
     });
+
+    document.getElementById("copyPrescriptionButton").addEventListener("click", event => {
+      copyCaseSheet({
+        omitNil: true,
+        button: event.currentTarget,
+        idleLabel: "Copy Prescription",
+        fields: prescriptionFields
+      });
+    });
+
+    document.getElementById("printVisitButton").addEventListener("click", printVisitNote);
+    document.getElementById("printDictationButton").addEventListener("click", printDictation);
+    document.getElementById("printPrescriptionButton").addEventListener("click", printPrescription);
 
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, character => ({
@@ -2033,6 +2372,10 @@
         addTrainingWord();
       }
     });
+    document.getElementById("doctorCredentialsInput").value = getDoctorCredentials();
+    document.getElementById("doctorCredentialsInput").addEventListener("input", event => {
+      setDoctorCredentials(event.currentTarget.value);
+    });
     document.getElementById("brandButton").addEventListener("click", resetScribe);
     document.getElementById("newButton").addEventListener("click", resetScribe);
     document.getElementById("registerDeviceButton").addEventListener("click", async event => {
@@ -2077,6 +2420,7 @@
       if (!document.hidden) focusKeyboardShortcuts();
     });
     setIdleControls();
+    updateModeUi();
     focusKeyboardShortcuts();
     scheduleTextareaResize();
     initializeDeviceApproval();
