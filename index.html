@@ -1946,7 +1946,7 @@
       document.getElementById("prescriptionAge").value = data.patientAge || "NIL";
       document.getElementById("prescriptionSex").value = data.patientSex || "NIL";
       document.getElementById("prescriptionUhid").value = data.patientUhid || "NIL";
-      document.getElementById("prescriptionMedications").value = data.medicationsAdvised || "NIL";
+      document.getElementById("prescriptionMedications").value = numberPrescriptionText(data.medicationsAdvised || "NIL");
       document.getElementById("prescriptionCredentials").value = getDoctorCredentials();
       scheduleTextareaResize();
     }
@@ -2155,6 +2155,16 @@
         .join("\n\n");
     }
 
+    function numberPrescriptionText(text) {
+      if (!text || text.trim().toUpperCase() === "NIL") return "NIL";
+      return text
+        .split(/\n+/)
+        .map(line => line.trim().replace(/^\d+[\.)]\s*/, "").replace(/^[-•]\s*/, ""))
+        .filter(Boolean)
+        .map((line, index) => `${index + 1}. ${line}`)
+        .join("\n");
+    }
+
     async function writeClipboardText(text) {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
@@ -2195,7 +2205,7 @@
             <span><strong>UHID:</strong> ${formatHtmlText(document.getElementById("prescriptionUhid").value.trim())}</span>
           </div>
           <h2>Medications / Advice</h2>
-          <div class="content">${formatHtmlText(document.getElementById("prescriptionMedications").value.trim())}</div>
+          <div class="content">${formatHtmlText(numberPrescriptionText(document.getElementById("prescriptionMedications").value.trim()))}</div>
           <div class="credentials">${formatHtmlText(document.getElementById("prescriptionCredentials").value.trim())}</div>
         `
         : sections.map(([heading, value]) => `
@@ -2246,6 +2256,8 @@
     }
 
     function printPrescription() {
+      const medicationBox = document.getElementById("prescriptionMedications");
+      medicationBox.value = numberPrescriptionText(medicationBox.value);
       printDocument({ title: "Prescription", prescription: true });
     }
 
@@ -2273,6 +2285,8 @@
     });
 
     document.getElementById("copyPrescriptionButton").addEventListener("click", event => {
+      const medicationBox = document.getElementById("prescriptionMedications");
+      medicationBox.value = numberPrescriptionText(medicationBox.value);
       copyCaseSheet({
         omitNil: true,
         button: event.currentTarget,
