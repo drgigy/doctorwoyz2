@@ -2158,8 +2158,14 @@
     function numberPrescriptionText(text) {
       if (!text || text.trim().toUpperCase() === "NIL") return "NIL";
       return text
+        .replace(/([a-z)])(\d+[\.)])(?=\s*[A-Z])/g, "$1\n$2")
         .split(/\n+/)
-        .map(line => line.trim().replace(/^\d+[\.)]\s*/, "").replace(/^[-•]\s*/, ""))
+        .map(line => line
+          .trim()
+          .replace(/^\d+[\.)]\s*/, "")
+          .replace(/^[-•]\s*/, "")
+          .replace(/\s*\d+[\.)]\s*$/, "")
+          .trim())
         .filter(Boolean)
         .map((line, index) => `${index + 1}. ${line}`)
         .join("\n");
