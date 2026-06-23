@@ -934,11 +934,13 @@
       resize: vertical;
     }
 
-    .prescription-result {
+    .prescription-result,
+    .certificate-result {
       display: none;
     }
 
-    .prescription-result.visible {
+    .prescription-result.visible,
+    .certificate-result.visible {
       display: block;
     }
 
@@ -1280,6 +1282,7 @@
             <button class="mode-option active" data-dictation-mode="reviewDictation" type="button">Review Dictation</button>
             <button class="mode-option" data-dictation-mode="visitDictation" type="button">Visit Note</button>
             <button class="mode-option" data-dictation-mode="prescription" type="button">Prescription</button>
+            <button class="mode-option" data-dictation-mode="medicalCertificate" type="button">Medical Certificate</button>
           </div>
         </div>
 
@@ -1314,6 +1317,10 @@
           <div class="result-actions" id="prescriptionActions" style="display:none;">
             <button class="copy-button" id="copyPrescriptionButton" type="button">Copy Prescription</button>
             <button class="copy-button" id="printPrescriptionButton" type="button">Print</button>
+          </div>
+          <div class="result-actions" id="certificateActions" style="display:none;">
+            <button class="copy-button" id="copyCertificateButton" type="button">Copy Certificate</button>
+            <button class="copy-button" id="printCertificateButton" type="button">Print</button>
           </div>
         </div>
         <div class="result-grid" id="visitNoteResult">
@@ -1413,6 +1420,38 @@
             <div class="section full">
               <h3>Doctor Credentials</h3>
               <textarea id="prescriptionCredentials" placeholder="Add doctor credentials in Settings."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="certificate-result" id="certificateResult">
+          <div class="result-grid">
+            <div class="section patient-detail">
+              <h3>Date</h3>
+              <textarea id="certificateDate">NIL</textarea>
+            </div>
+            <div class="section patient-detail">
+              <h3>Name</h3>
+              <textarea id="certificateName">NIL</textarea>
+            </div>
+            <div class="section patient-detail">
+              <h3>Age</h3>
+              <textarea id="certificateAge">NIL</textarea>
+            </div>
+            <div class="section patient-detail">
+              <h3>Sex</h3>
+              <textarea id="certificateSex">NIL</textarea>
+            </div>
+            <div class="section patient-detail">
+              <h3>UHID</h3>
+              <textarea id="certificateUhid">NIL</textarea>
+            </div>
+            <div class="section full">
+              <h3>Certificate Content</h3>
+              <textarea id="certificateBody" placeholder="The medical certificate content will appear here."></textarea>
+            </div>
+            <div class="section full">
+              <h3>Doctor Credentials</h3>
+              <textarea id="certificateCredentials" placeholder="Add doctor credentials in Settings."></textarea>
             </div>
           </div>
         </div>
@@ -1624,7 +1663,8 @@
       return {
         reviewDictation: "Dictation Mode - Review Dictation",
         visitDictation: "Dictation Mode - Visit Note",
-        prescription: "Dictation Mode - Prescription"
+        prescription: "Dictation Mode - Prescription",
+        medicalCertificate: "Dictation Mode - Medical Certificate"
       }[state.dictationMode] || "Dictation Mode";
     }
 
@@ -1880,12 +1920,16 @@
             ? "Transcribing your review dictation..."
             : backendMode === "prescription"
               ? "Preparing your prescription..."
+              : backendMode === "medicalCertificate"
+                ? "Preparing your medical certificate..."
               : "Preparing your visit note...";
         const result = await processWithSecureBackend(blob);
         if (result.mode === "reviewDictation") {
           showDictationResult(result.text);
         } else if (result.mode === "prescription") {
           showPrescriptionResult(result.prescription);
+        } else if (result.mode === "medicalCertificate") {
+          showMedicalCertificateResult(result.medicalCertificate);
         } else {
           showVisitNoteResult(result.report, result.mode);
         }
@@ -1895,6 +1939,8 @@
           showDictationResult("");
         } else if (getBackendMode() === "prescription") {
           showPrescriptionResult({});
+        } else if (getBackendMode() === "medicalCertificate") {
+          showMedicalCertificateResult({});
         } else {
           showVisitNoteResult({}, getBackendMode());
         }
@@ -1912,9 +1958,11 @@
       document.getElementById("visitNoteActions").style.display = "";
       document.getElementById("dictationActions").style.display = "none";
       document.getElementById("prescriptionActions").style.display = "none";
+      document.getElementById("certificateActions").style.display = "none";
       document.getElementById("visitNoteResult").style.display = "";
       document.getElementById("dictationResult").classList.remove("visible");
       document.getElementById("prescriptionResult").classList.remove("visible");
+      document.getElementById("certificateResult").classList.remove("visible");
       applyVisitLabels(mode);
       fillReport(report);
     }
@@ -1925,9 +1973,11 @@
       document.getElementById("visitNoteActions").style.display = "none";
       document.getElementById("dictationActions").style.display = "";
       document.getElementById("prescriptionActions").style.display = "none";
+      document.getElementById("certificateActions").style.display = "none";
       document.getElementById("visitNoteResult").style.display = "none";
       document.getElementById("dictationResult").classList.add("visible");
       document.getElementById("prescriptionResult").classList.remove("visible");
+      document.getElementById("certificateResult").classList.remove("visible");
       document.getElementById("dictationText").value = text || "";
       scheduleTextareaResize();
     }
@@ -1938,9 +1988,11 @@
       document.getElementById("visitNoteActions").style.display = "none";
       document.getElementById("dictationActions").style.display = "none";
       document.getElementById("prescriptionActions").style.display = "";
+      document.getElementById("certificateActions").style.display = "none";
       document.getElementById("visitNoteResult").style.display = "none";
       document.getElementById("dictationResult").classList.remove("visible");
       document.getElementById("prescriptionResult").classList.add("visible");
+      document.getElementById("certificateResult").classList.remove("visible");
       document.getElementById("prescriptionDate").value = data.date || new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
       document.getElementById("prescriptionName").value = data.patientName || "NIL";
       document.getElementById("prescriptionAge").value = data.patientAge || "NIL";
@@ -1948,6 +2000,27 @@
       document.getElementById("prescriptionUhid").value = data.patientUhid || "NIL";
       document.getElementById("prescriptionMedications").value = numberPrescriptionText(data.medicationsAdvised || "NIL");
       document.getElementById("prescriptionCredentials").value = getDoctorCredentials();
+      scheduleTextareaResize();
+    }
+
+    function showMedicalCertificateResult(data = {}) {
+      state.resultMode = "medicalCertificate";
+      document.getElementById("resultHeading").textContent = "Medical Certificate";
+      document.getElementById("visitNoteActions").style.display = "none";
+      document.getElementById("dictationActions").style.display = "none";
+      document.getElementById("prescriptionActions").style.display = "none";
+      document.getElementById("certificateActions").style.display = "";
+      document.getElementById("visitNoteResult").style.display = "none";
+      document.getElementById("dictationResult").classList.remove("visible");
+      document.getElementById("prescriptionResult").classList.remove("visible");
+      document.getElementById("certificateResult").classList.add("visible");
+      document.getElementById("certificateDate").value = data.date || new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+      document.getElementById("certificateName").value = data.patientName || "NIL";
+      document.getElementById("certificateAge").value = data.patientAge || "NIL";
+      document.getElementById("certificateSex").value = data.patientSex || "NIL";
+      document.getElementById("certificateUhid").value = data.patientUhid || "NIL";
+      document.getElementById("certificateBody").value = data.certificateBody || "";
+      document.getElementById("certificateCredentials").value = getDoctorCredentials();
       scheduleTextareaResize();
     }
 
@@ -2133,6 +2206,16 @@
       ["Doctor Credentials", "prescriptionCredentials"]
     ];
 
+    const certificateFields = [
+      ["Date", "certificateDate"],
+      ["Name", "certificateName"],
+      ["Age", "certificateAge"],
+      ["Sex", "certificateSex"],
+      ["UHID", "certificateUhid"],
+      ["Certificate Content", "certificateBody"],
+      ["Doctor Credentials", "certificateCredentials"]
+    ];
+
     function getDoctorCredentials() {
       return localStorage.getItem("doctor_woyz_doctor_credentials") || "";
     }
@@ -2141,6 +2224,8 @@
       localStorage.setItem("doctor_woyz_doctor_credentials", value);
       const prescriptionBox = document.getElementById("prescriptionCredentials");
       if (prescriptionBox && state.resultMode === "prescription") prescriptionBox.value = value;
+      const certificateBox = document.getElementById("certificateCredentials");
+      if (certificateBox && state.resultMode === "medicalCertificate") certificateBox.value = value;
     }
 
     function activeVisitFields() {
@@ -2171,6 +2256,35 @@
         .join("\n");
     }
 
+    function certificateBodyText() {
+      const body = document.getElementById("certificateBody").value.trim();
+      if (!body) return "NIL";
+      if (/^this is to certify/i.test(body)) return body;
+      const name = document.getElementById("certificateName").value.trim();
+      const age = document.getElementById("certificateAge").value.trim();
+      const sex = document.getElementById("certificateSex").value.trim();
+      const uhid = document.getElementById("certificateUhid").value.trim();
+      const details = [
+        name && name.toUpperCase() !== "NIL" ? name : "",
+        age && age.toUpperCase() !== "NIL" ? `${age} old` : "",
+        sex && sex.toUpperCase() !== "NIL" ? sex : "",
+        uhid && uhid.toUpperCase() !== "NIL" ? `UHID ${uhid}` : ""
+      ].filter(Boolean).join(", ");
+      return details
+        ? `This is to certify that ${details}. ${body}`
+        : `This is to certify that ${body}`;
+    }
+
+    function certificatePlainText() {
+      return [
+        document.getElementById("certificateDate").value.trim(),
+        "To Whomsoever It May Concern",
+        certificateBodyText(),
+        "Thank you",
+        document.getElementById("certificateCredentials").value.trim()
+      ].filter(Boolean).join("\n\n");
+    }
+
     async function writeClipboardText(text) {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
@@ -2197,8 +2311,18 @@
       return escapeHtml(value || "NIL").replace(/\n/g, "<br>");
     }
 
-    function printDocument({ title, sections, prescription = false }) {
-      const body = prescription
+    function printDocument({ title, sections, prescription = false, certificate = false }) {
+      const body = certificate
+        ? `
+          <div class="certificate-date">${formatHtmlText(document.getElementById("certificateDate").value.trim())}</div>
+          <h1 class="certificate-title">To Whomsoever It May Concern</h1>
+          <div class="certificate-body">
+            ${formatHtmlText(certificateBodyText())}
+          </div>
+          <div class="certificate-thanks">Thank you</div>
+          <div class="credentials">${formatHtmlText(document.getElementById("certificateCredentials").value.trim())}</div>
+        `
+        : prescription
         ? `
           <div class="rx-head">
             <h1>Prescription</h1>
@@ -2236,10 +2360,14 @@
               .rx-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #d0d5dd; padding-bottom: 12px; margin-bottom: 18px; }
               .patient-line { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; margin-bottom: 22px; }
               .credentials { margin-top: 70px; white-space: normal; text-align: right; font-size: 14px; }
+              .certificate-date { text-align: right; margin-bottom: 48px; font-size: 15px; }
+              .certificate-title { text-align: center; color: #111827; text-transform: uppercase; text-decoration: underline; letter-spacing: .04em; margin-bottom: 36px; }
+              .certificate-body { white-space: normal; font-size: 16px; line-height: 1.8; text-align: justify; margin-top: 12px; }
+              .certificate-thanks { margin-top: 42px; font-size: 15px; }
               @media print { body { margin: 24mm 18mm; } button { display: none; } }
             </style>
           </head>
-          <body>${prescription ? body : `<h1>${escapeHtml(title)}</h1>${body}`}</body>
+          <body>${prescription || certificate ? body : `<h1>${escapeHtml(title)}</h1>${body}`}</body>
         </html>
       `);
       printWindow.document.close();
@@ -2265,6 +2393,10 @@
       const medicationBox = document.getElementById("prescriptionMedications");
       medicationBox.value = numberPrescriptionText(medicationBox.value);
       printDocument({ title: "Prescription", prescription: true });
+    }
+
+    function printMedicalCertificate() {
+      printDocument({ title: "Medical Certificate", certificate: true });
     }
 
     document.getElementById("copyButton").addEventListener("click", event => {
@@ -2301,9 +2433,25 @@
       });
     });
 
+    document.getElementById("copyCertificateButton").addEventListener("click", async event => {
+      const button = event.currentTarget;
+      button.textContent = "Copied";
+      button.disabled = true;
+      setTimeout(() => {
+        button.textContent = "Copy Certificate";
+        button.disabled = false;
+      }, 1400);
+      try {
+        await writeClipboardText(certificatePlainText());
+      } catch (error) {
+        console.warn("Copy certificate failed:", error);
+      }
+    });
+
     document.getElementById("printVisitButton").addEventListener("click", printVisitNote);
     document.getElementById("printDictationButton").addEventListener("click", printDictation);
     document.getElementById("printPrescriptionButton").addEventListener("click", printPrescription);
+    document.getElementById("printCertificateButton").addEventListener("click", printMedicalCertificate);
 
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, character => ({
