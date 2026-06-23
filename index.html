@@ -971,6 +971,7 @@
       margin: 0 0 12px;
       color: #94a3b8;
       font-size: 13px;
+      font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.06em;
     }
@@ -2311,6 +2312,20 @@
       return escapeHtml(value || "NIL").replace(/\n/g, "<br>");
     }
 
+    function formatCredentialsHtml(value) {
+      const lines = String(value || "").split("\n");
+      if (!lines.some(line => line.trim())) return "";
+      const firstLineIndex = lines.findIndex(line => line.trim());
+      return lines
+        .map((line, index) => {
+          const escaped = escapeHtml(line);
+          return index === firstLineIndex
+            ? `<strong>${escaped}</strong>`
+            : escaped;
+        })
+        .join("<br>");
+    }
+
     function printDocument({ title, sections, prescription = false, certificate = false }) {
       const body = certificate
         ? `
@@ -2321,7 +2336,7 @@
               ${formatHtmlText(certificateBodyText())}
             </div>
             <div class="certificate-thanks">Thank you</div>
-            <div class="certificate-credentials">${formatHtmlText(document.getElementById("certificateCredentials").value.trim())}</div>
+            <div class="certificate-credentials">${formatCredentialsHtml(document.getElementById("certificateCredentials").value.trim())}</div>
           </div>
         `
         : prescription
@@ -2338,7 +2353,7 @@
           </div>
           <h2>Medications / Advice</h2>
           <div class="content">${formatHtmlText(numberPrescriptionText(document.getElementById("prescriptionMedications").value.trim()))}</div>
-          <div class="credentials">${formatHtmlText(document.getElementById("prescriptionCredentials").value.trim())}</div>
+          <div class="credentials">${formatCredentialsHtml(document.getElementById("prescriptionCredentials").value.trim())}</div>
         `
         : sections.map(([heading, value]) => `
           <section>
@@ -2356,12 +2371,12 @@
             <style>
               body { font-family: Arial, sans-serif; color: #111827; margin: 36px; line-height: 1.45; }
               h1 { margin: 0 0 18px; color: #1f3f8f; font-size: 26px; }
-              h2 { margin: 18px 0 6px; color: #334155; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+              h2 { margin: 18px 0 6px; color: #334155; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
               section { break-inside: avoid; margin-bottom: 12px; }
               .content { white-space: normal; font-size: 15px; }
               .rx-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #d0d5dd; padding-bottom: 12px; margin-bottom: 18px; }
               .patient-line { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; margin-bottom: 22px; }
-              .credentials { margin-top: 70px; white-space: normal; text-align: right; font-size: 14px; }
+              .credentials { margin-top: 70px; white-space: normal; text-align: left; font-size: 14px; }
               .certificate-page { padding-top: 72px; }
               .certificate-date { text-align: right; margin-bottom: 48px; font-size: 15px; }
               .certificate-title { text-align: center; color: #111827; text-transform: uppercase; text-decoration: underline; letter-spacing: .04em; margin-bottom: 36px; font-size: 22px; }
