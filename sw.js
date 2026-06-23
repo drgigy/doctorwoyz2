@@ -1,4 +1,4 @@
-const CACHE_NAME = "doctor-woyz-v30";
+const CACHE_NAME = "doctor-woyz-v31";
 const APP_SHELL = [
   "./",
   "./index.html",
