@@ -240,7 +240,7 @@
 
     .new-button {
       position: absolute;
-      right: 20px;
+      left: 20px;
       top: 50%;
       transform: translateY(-50%);
       display: none;
@@ -283,6 +283,7 @@
     }
 
     .card {
+      position: relative;
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 18px;
@@ -699,34 +700,6 @@
       margin-top: 0;
     }
 
-    .training-field {
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid var(--line);
-    }
-
-    .training-entry {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 8px;
-    }
-
-    .training-entry input {
-      min-width: 0;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 10px 12px;
-      color: var(--text);
-      background: var(--bg);
-      font: 500 13px/1.45 Inter, system-ui, sans-serif;
-      outline: none;
-    }
-
-    .training-entry input:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
-
     .credentials-field {
       margin-top: 14px;
       padding-top: 14px;
@@ -749,17 +722,6 @@
     .credentials-field textarea:focus {
       border-color: var(--blue);
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
-
-    .add-training-button {
-      min-width: 42px;
-      border: 0;
-      border-radius: 10px;
-      color: #ffffff;
-      background: var(--blue);
-      font-size: 20px;
-      font-weight: 900;
-      cursor: pointer;
     }
 
     .remove-key {
@@ -902,6 +864,15 @@
       justify-content: flex-end;
       flex-wrap: wrap;
       gap: 10px;
+    }
+
+    .result.visible .result-actions {
+      position: fixed;
+      top: 14px;
+      right: max(20px, calc((100vw - 1100px) / 2 + 20px));
+      z-index: 20;
+      align-items: center;
+      max-width: min(52vw, 560px);
     }
 
     .copy-button {
@@ -1075,7 +1046,7 @@
       .new-button {
         position: static;
         transform: none;
-        margin-left: auto;
+        margin-right: auto;
         padding: 9px 10px;
       }
 
@@ -1168,6 +1139,8 @@
       }
 
       .result-actions {
+        position: static !important;
+        max-width: none !important;
         display: grid;
         grid-template-columns: 1fr;
       }
@@ -1200,6 +1173,44 @@
         max-height: min(620px, calc(100dvh - 90px));
         overflow-y: auto;
         border-radius: 8px;
+      }
+    }
+
+    @media (min-width: 721px) and (max-width: 1180px) and (pointer: coarse) {
+      .card.recording-controls {
+        padding-bottom: 116px;
+      }
+
+      .card.recording-controls .focus-box {
+        margin-bottom: 0;
+      }
+
+      .card.recording-controls .controls {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 24px;
+        min-height: 72px;
+        pointer-events: none;
+      }
+
+      .card.recording-controls .control-item {
+        position: absolute;
+        bottom: 0;
+        pointer-events: auto;
+      }
+
+      .card.recording-controls .pause-control {
+        left: 24px;
+      }
+
+      .card.recording-controls .stop-control {
+        right: 24px;
+      }
+
+      .card.recording-controls .round {
+        width: 72px;
+        height: 72px;
       }
     }
 
@@ -1466,18 +1477,10 @@
           <span>Dark Mode</span>
           <button class="switch" id="darkSwitch" type="button" aria-label="Toggle dark mode"><span></span></button>
         </div>
-        <div class="training-field">
-          <p class="settings-title">Training Words</p>
-          <div class="training-entry">
-            <input id="trainingWordInput" type="text" autocomplete="off" aria-label="Training word">
-            <button class="add-training-button" id="addTrainingWordButton" type="button" aria-label="Add training word">+</button>
-          </div>
-        </div>
         <div class="credentials-field">
           <p class="settings-title">Doctor Credentials</p>
           <textarea id="doctorCredentialsInput" placeholder="Doctor name&#10;Qualifications&#10;Registration number&#10;Clinic / hospital address"></textarea>
         </div>
-        <p class="key-status" id="trainingStatus">AI processing is securely connected.</p>
       </div>
       <button class="settings-button" id="settingsButton" type="button" title="Settings">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.52a2 2 0 0 1-1 1.72l-.15.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.52a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -1488,7 +1491,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-    import { addDoc, collection, doc, getFirestore, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    import { doc, getFirestore, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-functions.js";
 
     const firebaseConfig = {
@@ -1510,10 +1513,6 @@
     });
     let currentDeviceRef = null;
     let currentDeviceData = null;
-    let trainingRef = null;
-    let trainingSubmissionsRef = null;
-    let trainingUnsubscribe = null;
-    let trainingWordsCache = [];
 
     const state = {
       mediaRecorder: null,
@@ -1550,7 +1549,6 @@
       const app = document.getElementById("app");
       approvalGate.classList.add("hidden");
       app.classList.remove("locked");
-      startTrainingSync();
     }
 
     function showApprovalGate() {
@@ -1598,8 +1596,6 @@
         if (!auth.currentUser) await signInAnonymously(auth);
         const user = auth.currentUser;
         currentDeviceRef = doc(db, "devices", user.uid);
-        trainingRef = doc(db, "settings", "trainingWords");
-        trainingSubmissionsRef = collection(db, "trainingSubmissions");
         onSnapshot(currentDeviceRef, snapshot => {
           showDeviceState(snapshot.exists() ? snapshot.data() : null);
         }, error => {
@@ -1711,6 +1707,7 @@
     }
 
     function setRecordingControls() {
+      recordCard.classList.add("recording-controls");
       controls.innerHTML = `
         <span class="control-item pause-control">
           <button class="round pause" id="pauseButton" type="button" title="Pause Recording" aria-label="Pause Recording">${icon("pause")}<span class="mobile-button-text" id="pauseButtonText">Pause</span></button>
@@ -1727,6 +1724,7 @@
     }
 
     function setIdleControls() {
+      recordCard.classList.remove("recording-controls");
       controls.innerHTML = `
         <span class="control-item start-control">
           <button class="round record" id="recordButton" type="button" title="Start Recording" aria-label="Start Recording">${icon("mic")}<span class="mobile-button-text">Start recording</span></button>
@@ -1906,8 +1904,7 @@
       const result = await generateVisitNote({
         audioBase64,
         mimeType,
-        mode: getBackendMode(),
-        training: getTrainingData()
+        mode: getBackendMode()
       });
       return result.data;
     }
@@ -2482,83 +2479,6 @@
       }[character]));
     }
 
-    function getTrainingData() {
-      return {
-        terms: getTrainingWords().join("\n").slice(0, 1500)
-      };
-    }
-
-    function getTrainingWords() {
-      return normalizeTrainingWords(trainingWordsCache);
-    }
-
-    function normalizeTrainingWords(words) {
-      return Array.isArray(words)
-        ? words
-            .filter(word => typeof word === "string" && word.trim())
-            .map(word => word.trim().slice(0, 80))
-            .filter((word, index, list) => list.findIndex(item => item.toLowerCase() === word.toLowerCase()) === index)
-            .slice(0, 120)
-        : [];
-    }
-
-    function getLocalTrainingWords() {
-      try {
-        return normalizeTrainingWords(JSON.parse(localStorage.getItem("doctor_woyz_training_words") || "[]"));
-      } catch {
-        return [];
-      }
-    }
-
-    function startTrainingSync() {
-      if (!trainingRef || trainingUnsubscribe) return;
-      trainingUnsubscribe = onSnapshot(trainingRef, snapshot => {
-        if (snapshot.exists()) {
-          trainingWordsCache = normalizeTrainingWords(snapshot.data().words);
-          localStorage.setItem("doctor_woyz_training_words", JSON.stringify(trainingWordsCache));
-          document.getElementById("trainingStatus").textContent = "Approved training glossary synced.";
-          return;
-        }
-        trainingWordsCache = getLocalTrainingWords();
-      }, error => {
-        trainingWordsCache = getLocalTrainingWords();
-        document.getElementById("trainingStatus").textContent = `Training sync unavailable: ${error.message}`;
-      });
-    }
-
-    async function addTrainingWord() {
-      const input = document.getElementById("trainingWordInput");
-      const word = input.value.trim();
-      if (!word) return;
-      if (!trainingSubmissionsRef || !auth.currentUser) {
-        document.getElementById("trainingStatus").textContent = "Still connecting. Please try again.";
-        return;
-      }
-      await addDoc(trainingSubmissionsRef, {
-        word: word.slice(0, 80),
-        status: "pending",
-        submittedAt: serverTimestamp(),
-        submittedBy: auth.currentUser.uid,
-        doctorName: currentDeviceData?.doctorName || "",
-        deviceName: currentDeviceData?.deviceName || ""
-      });
-      input.value = "";
-      const status = document.getElementById("trainingStatus");
-      status.textContent = "Training word submitted for admin approval.";
-      setTimeout(() => {
-        status.textContent = trainingSubmissionsRef
-          ? "Approved training glossary synced."
-          : "AI processing is securely connected.";
-      }, 1800);
-    }
-
-    document.getElementById("addTrainingWordButton").addEventListener("click", addTrainingWord);
-    document.getElementById("trainingWordInput").addEventListener("keydown", event => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        addTrainingWord();
-      }
-    });
     document.getElementById("doctorCredentialsInput").value = getDoctorCredentials();
     document.getElementById("doctorCredentialsInput").addEventListener("input", event => {
       setDoctorCredentials(event.currentTarget.value);
@@ -2595,7 +2515,6 @@
     });
     localStorage.removeItem("doctor_woyz_api_key");
     localStorage.removeItem("opd_demo_ai_model_v2");
-    trainingWordsCache = getLocalTrainingWords();
     document.querySelectorAll(".section textarea").forEach(textarea => {
       textarea.addEventListener("input", () => resizeTextarea(textarea));
     });
