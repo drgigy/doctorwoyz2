@@ -1911,9 +1911,18 @@
 
     async function processAudio(blob) {
       setView("processing");
+      const processingText = document.getElementById("processingText");
+      const slowProcessingTimers = [
+        setTimeout(() => {
+          processingText.textContent = "Still processing. The first dictation after a long gap can take longer while the secure backend wakes up.";
+        }, 90000),
+        setTimeout(() => {
+          processingText.textContent = "Still working securely. Please keep this page open; your recording is being processed.";
+        }, 180000)
+      ];
       try {
         const backendMode = getBackendMode();
-        document.getElementById("processingText").textContent =
+        processingText.textContent =
           backendMode === "reviewDictation"
             ? "Transcribing your review dictation..."
             : backendMode === "prescription"
@@ -1946,6 +1955,8 @@
         const message = error?.message || "The visit note could not be generated.";
         document.getElementById("resultMessage").textContent =
           `${message} Your recording was not saved; please return and try again.`;
+      } finally {
+        slowProcessingTimers.forEach(clearTimeout);
       }
       setView("result");
     }
