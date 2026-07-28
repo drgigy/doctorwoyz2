@@ -314,6 +314,8 @@
     }
 
     .focus-inner {
+      width: 100%;
+      max-width: 560px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -331,37 +333,22 @@
       gap: 7px;
     }
 
-    .pulse-wrap {
-      position: relative;
-      width: 74px;
-      height: 74px;
+    .waveform-wrap {
+      width: min(100%, 520px);
+      height: 96px;
       display: grid;
       place-items: center;
+      padding: 8px 10px;
+      border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--panel) 78%, var(--panel-soft));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
     }
 
-    .pulse-ring {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 2px solid rgba(37, 99, 235, 0.2);
-    }
-
-    .focus-box.recording .pulse-ring {
-      animation: pulseRing 1.7s ease-out infinite;
-    }
-
-    .focus-mark {
-      position: relative;
-      width: 54px;
-      height: 54px;
-      display: grid;
-      place-items: center;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #111827, var(--blue));
-      color: #ffffff;
-      font-size: 30px;
-      font-weight: 900;
-      box-shadow: 0 16px 32px rgba(37, 99, 235, 0.2);
+    .waveform-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     .timer-label {
@@ -370,17 +357,6 @@
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-    }
-
-    @keyframes pulseRing {
-      from {
-        opacity: 0.8;
-        transform: scale(0.82);
-      }
-      to {
-        opacity: 0;
-        transform: scale(1.42);
-      }
     }
 
     .controls {
@@ -1265,9 +1241,8 @@
         <div class="card" id="recordCard" tabindex="-1">
           <div class="focus-box" id="focusBox">
             <div class="focus-inner">
-              <div class="pulse-wrap" aria-hidden="true">
-                <span class="pulse-ring"></span>
-                <span class="focus-mark">W</span>
+              <div class="waveform-wrap" aria-hidden="true">
+                <canvas class="waveform-canvas" id="waveformCanvas"></canvas>
               </div>
               <div class="timer-label">Remaining</div>
               <div class="timer" id="timer">05:00</div>
@@ -1538,6 +1513,7 @@
     const controls = document.getElementById("controls");
     const timer = document.getElementById("timer");
     const status = document.getElementById("status");
+    const waveformCanvas = document.getElementById("waveformCanvas");
     const DEFAULT_RECORDING_SECONDS = 300;
     const EXTEND_SECONDS = 300;
     function showApprovedApp() {
@@ -1686,6 +1662,8 @@
       state.paused = true;
       clearInterval(state.timerId);
       cancelAnimationFrame(state.animationId);
+      state.animationId = null;
+      drawFlatWaveform();
       timer.textContent = "00:00";
       status.textContent = "5 minute limit reached. Tap Extend 5 min to continue, or Stop & transcribe when ready.";
       document.getElementById("extendButton").classList.add("alert");
@@ -1695,11 +1673,83 @@
     }
 
     async function startVisualization(stream) {
+      cancelAnimationFrame(state.animationId);
+      if (state.audioContext) {
+        await state.audioContext.close().catch(() => {});
+      }
       state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (state.audioContext.state === "suspended") {
+        await state.audioContext.resume();
+      }
       state.analyser = state.audioContext.createAnalyser();
       state.analyser.fftSize = 2048;
       const source = state.audioContext.createMediaStreamSource(stream);
       source.connect(state.analyser);
+      renderWaveform();
+    }
+
+    function sizeWaveformCanvas() {
+      const rect = waveformCanvas.getBoundingClientRect();
+      const pixelRatio = window.devicePixelRatio || 1;
+      const width = Math.max(1, Math.floor(rect.width * pixelRatio));
+      const height = Math.max(1, Math.floor(rect.height * pixelRatio));
+      if (waveformCanvas.width !== width || waveformCanvas.height !== height) {
+        waveformCanvas.width = width;
+        waveformCanvas.height = height;
+      }
+      return { width, height, pixelRatio };
+    }
+
+    function drawFlatWaveform() {
+      const context = waveformCanvas.getContext("2d");
+      const { width, height } = sizeWaveformCanvas();
+      const centerY = height / 2;
+      context.clearRect(0, 0, width, height);
+      context.lineWidth = Math.max(2, width / 260);
+      context.lineCap = "round";
+      context.strokeStyle = "rgba(37, 99, 235, 0.42)";
+      context.beginPath();
+      context.moveTo(0, centerY);
+      context.lineTo(width, centerY);
+      context.stroke();
+    }
+
+    function renderWaveform() {
+      if (!waveformCanvas) return;
+      const context = waveformCanvas.getContext("2d");
+      const { width, height } = sizeWaveformCanvas();
+      const centerY = height / 2;
+      const amplitude = height * 0.42;
+      context.clearRect(0, 0, width, height);
+      context.lineWidth = Math.max(2, width / 250);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.strokeStyle = "#2563eb";
+      context.shadowColor = "rgba(37, 99, 235, 0.28)";
+      context.shadowBlur = 8;
+
+      if (!state.analyser || !state.mediaRecorder || state.mediaRecorder.state !== "recording") {
+        context.shadowBlur = 0;
+        drawFlatWaveform();
+        return;
+      }
+
+      const data = new Uint8Array(state.analyser.fftSize);
+      state.analyser.getByteTimeDomainData(data);
+      context.beginPath();
+      for (let x = 0; x < width; x += 1) {
+        const dataIndex = Math.floor((x / width) * data.length);
+        const normalized = (data[dataIndex] - 128) / 128;
+        const y = centerY + normalized * amplitude;
+        if (x === 0) {
+          context.moveTo(x, y);
+        } else {
+          context.lineTo(x, y);
+        }
+      }
+      context.stroke();
+      context.shadowBlur = 0;
+      state.animationId = requestAnimationFrame(renderWaveform);
     }
 
     function setRecordingControls() {
@@ -1785,6 +1835,7 @@
         state.paused = false;
         updatePauseButton(false);
         focusBox.classList.add("recording");
+        renderWaveform();
       }
       state.startedAt = Date.now() - state.elapsed * 1000;
       clearInterval(state.timerId);
@@ -1816,12 +1867,15 @@
         document.getElementById("extendButton").classList.remove("alert");
         updatePauseButton(false);
         focusBox.classList.add("recording");
+        renderWaveform();
         focusKeyboardShortcuts();
       } else if (state.mediaRecorder.state === "recording") {
         state.mediaRecorder.pause();
         state.paused = true;
         clearInterval(state.timerId);
         cancelAnimationFrame(state.animationId);
+        state.animationId = null;
+        drawFlatWaveform();
         status.textContent = "Recording paused";
         updatePauseButton(true);
         focusBox.classList.remove("recording");
@@ -1840,7 +1894,13 @@
     async function handleRecordingComplete() {
       clearInterval(state.timerId);
       cancelAnimationFrame(state.animationId);
-      if (state.audioContext) state.audioContext.close();
+      state.animationId = null;
+      drawFlatWaveform();
+      if (state.audioContext) {
+        await state.audioContext.close().catch(() => {});
+        state.audioContext = null;
+        state.analyser = null;
+      }
       if (state.stream) {
         state.stream.getAudioTracks().forEach(track => {
           track.enabled = false;
@@ -2089,7 +2149,13 @@
       }
       clearInterval(state.timerId);
       cancelAnimationFrame(state.animationId);
-      if (state.audioContext) state.audioContext.close();
+      state.animationId = null;
+      drawFlatWaveform();
+      if (state.audioContext) {
+        state.audioContext.close().catch(() => {});
+        state.audioContext = null;
+        state.analyser = null;
+      }
       if (state.stream) {
         state.stream.getAudioTracks().forEach(track => {
           track.enabled = false;
@@ -2539,7 +2605,15 @@
       textarea.addEventListener("input", () => resizeTextarea(textarea));
     });
     document.getElementById("extendButton").addEventListener("click", extendRecording);
-    window.addEventListener("resize", scheduleTextareaResize);
+    window.addEventListener("resize", () => {
+      scheduleTextareaResize();
+      if (state.mediaRecorder && state.mediaRecorder.state === "recording") {
+        cancelAnimationFrame(state.animationId);
+        renderWaveform();
+      } else {
+        drawFlatWaveform();
+      }
+    });
     window.addEventListener("load", focusKeyboardShortcuts);
     window.addEventListener("pageshow", focusKeyboardShortcuts);
     document.addEventListener("visibilitychange", () => {
@@ -2547,6 +2621,7 @@
     });
     setIdleControls();
     updateModeUi();
+    drawFlatWaveform();
     focusKeyboardShortcuts();
     scheduleTextareaResize();
     initializeDeviceApproval();
