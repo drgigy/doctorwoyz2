@@ -335,7 +335,7 @@
 
     .waveform-wrap {
       width: min(100%, 520px);
-      height: 78px;
+      height: 112px;
       position: relative;
       overflow: hidden;
       display: block;
@@ -348,7 +348,7 @@
 
     .waveform-canvas {
       width: 100%;
-      height: 60px;
+      height: 94px;
       display: block;
     }
 
@@ -1761,7 +1761,8 @@
       const context = waveformCanvas.getContext("2d");
       const { width, height } = sizeWaveformCanvas();
       const centerY = height / 2;
-      const amplitude = height * 0.42;
+      const amplitude = height * 0.46;
+      const waveGain = 2.2;
       context.clearRect(0, 0, width, height);
       context.lineWidth = Math.max(2, width / 250);
       context.lineCap = "round";
@@ -1781,7 +1782,7 @@
       context.beginPath();
       for (let x = 0; x < width; x += 1) {
         const dataIndex = Math.floor((x / width) * data.length);
-        const normalized = (data[dataIndex] - 128) / 128;
+        const normalized = Math.max(-1, Math.min(1, ((data[dataIndex] - 128) / 128) * waveGain));
         const y = centerY + normalized * amplitude;
         if (x === 0) {
           context.moveTo(x, y);
