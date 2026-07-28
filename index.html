@@ -1761,8 +1761,9 @@
       const context = waveformCanvas.getContext("2d");
       const { width, height } = sizeWaveformCanvas();
       const centerY = height / 2;
-      const amplitude = height * 0.46;
-      const waveGain = 2.2;
+      const amplitude = height * 0.49;
+      const waveGain = 2.8;
+      const sampleStep = Math.max(4, Math.floor(width / 120));
       context.clearRect(0, 0, width, height);
       context.lineWidth = Math.max(2, width / 250);
       context.lineCap = "round";
@@ -1780,7 +1781,7 @@
       const data = new Uint8Array(state.analyser.fftSize);
       state.analyser.getByteTimeDomainData(data);
       context.beginPath();
-      for (let x = 0; x < width; x += 1) {
+      for (let x = 0; x <= width; x += sampleStep) {
         const dataIndex = Math.floor((x / width) * data.length);
         const normalized = Math.max(-1, Math.min(1, ((data[dataIndex] - 128) / 128) * waveGain));
         const y = centerY + normalized * amplitude;
