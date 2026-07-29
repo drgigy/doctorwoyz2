@@ -1531,8 +1531,8 @@
       audioContext: null,
       analyser: null,
       animationId: null,
-      waveformPoints: [],
-      waveformLastUpdate: 0
+      waveformLevel: 0,
+      waveformPhase: 0
     };
 
     const recordView = document.getElementById("recordView");
@@ -1714,8 +1714,8 @@
       }
       state.analyser = state.audioContext.createAnalyser();
       state.analyser.fftSize = 2048;
-      state.waveformPoints = [];
-      state.waveformLastUpdate = 0;
+      state.waveformLevel = 0;
+      state.waveformPhase = 0;
       const source = state.audioContext.createMediaStreamSource(stream);
       source.connect(state.analyser);
       renderWaveform();
@@ -1765,9 +1765,10 @@
       const context = waveformCanvas.getContext("2d");
       const { width, height } = sizeWaveformCanvas();
       const centerY = height / 2;
-      const amplitude = height * 0.52;
-      const pointCount = 40;
+      const amplitude = height * 0.5;
+      const pointCount = 100;
       const pointGap = width / Math.max(1, pointCount - 1);
+      const waveCycles = 9;
       context.clearRect(0, 0, width, height);
       context.lineWidth = Math.max(3, width / 180);
       context.lineCap = "round";
@@ -1784,36 +1785,28 @@
 
       const data = new Uint8Array(state.analyser.fftSize);
       state.analyser.getByteTimeDomainData(data);
-      if (state.waveformPoints.length !== pointCount) {
-        state.waveformPoints = Array(pointCount).fill(0);
+      let sum = 0;
+      for (let index = 0; index < data.length; index += 1) {
+        const sample = (data[index] - 128) / 128;
+        sum += sample * sample;
       }
-      const now = performance.now();
-      if (!state.waveformLastUpdate || now - state.waveformLastUpdate > 180) {
-        let sum = 0;
-        for (let index = 0; index < data.length; index += 1) {
-          const sample = (data[index] - 128) / 128;
-          sum += sample * sample;
-        }
-        const rms = Math.sqrt(sum / data.length);
-        const direction = (state.waveformPoints.at(-1) || 0) >= 0 ? -1 : 1;
-        const nextPoint = Math.max(-1, Math.min(1, rms * 9 * direction));
-        state.waveformPoints.shift();
-        state.waveformPoints.push(nextPoint);
-        state.waveformLastUpdate = now;
-      }
+      const rms = Math.sqrt(sum / data.length);
+      const targetLevel = Math.max(0.02, Math.min(1, rms * 11));
+      state.waveformLevel = state.waveformLevel * 0.78 + targetLevel * 0.22;
+      state.waveformPhase += 0.07;
       context.beginPath();
-      state.waveformPoints.forEach((point, index) => {
-        const previous = state.waveformPoints[index - 1] ?? point;
-        const next = state.waveformPoints[index + 1] ?? point;
-        const smoothedPoint = (previous + point * 2 + next) / 4;
+      for (let index = 0; index < pointCount; index += 1) {
         const x = index * pointGap;
-        const y = centerY + smoothedPoint * amplitude;
+        const progress = index / Math.max(1, pointCount - 1);
+        const wave = Math.sin(progress * Math.PI * 2 * waveCycles + state.waveformPhase);
+        const envelope = 0.72 + 0.28 * Math.sin(progress * Math.PI);
+        const y = centerY + wave * amplitude * state.waveformLevel * envelope;
         if (index === 0) {
           context.moveTo(x, y);
         } else {
           context.lineTo(x, y);
         }
-      });
+      }
       context.stroke();
       context.shadowBlur = 0;
       state.animationId = requestAnimationFrame(renderWaveform);
